@@ -18,6 +18,8 @@ namespace Mirle.Agv.AseMiddler.Controller
 {
     public class MainFlowHandler
     {
+        public string ThisIsInNewBranch001 { get; set; } = "";
+
         #region TransCmds
         public bool IsOverrideMove { get; set; }
         public bool IsAvoidMove { get; set; }
