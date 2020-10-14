@@ -754,7 +754,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     foreach (var portInfo in Vehicle.PortInfos.ToArray())
                     {
                         if (portInfo.IsInputMode && portInfo.IsAGVPortReady)
-                        {                           
+                        {
                             if (!Vehicle.AseMoveStatus.LastAddress.PortIdMap.ContainsKey(portInfo.ID))
                             {
                                 foreach (var AddressId in station.AddressIds)
@@ -1139,7 +1139,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitLoadArrivalReply;
                 Vehicle.TransferCommand.IsLoadArrivalReply = false;
-                agvcConnector.ReportLoadArrival(Vehicle.TransferCommand.CommandId);
+                agvcConnector.ReportLoadArrival(Vehicle.TransferCommand.CommandId, Vehicle.TransferCommand.LoadPortId);
             }
             catch (Exception ex)
             {
@@ -1593,7 +1593,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitUnloadArrivalReply;
                 Vehicle.TransferCommand.IsUnloadArrivalReply = false;
-                agvcConnector.ReportUnloadArrival(Vehicle.TransferCommand.CommandId);
+                agvcConnector.ReportUnloadArrival(Vehicle.TransferCommand.CommandId, Vehicle.TransferCommand.UnloadPortId);
             }
             catch (Exception ex)
             {

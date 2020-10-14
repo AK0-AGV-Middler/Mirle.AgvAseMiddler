@@ -876,7 +876,8 @@ namespace Mirle.Agv.AseMiddler.View
                     for (int i = 0; i < transferCommands.Count; i++)
                     {
                         txtTransferCommands[i].Text = GetTransferCmdInfo(transferCommands[i]);
-                        txtTransferCommands[i].Font = new Font(txtTransferCommands[i].Font, FontStyle.Bold);
+                        if (transferCommands[i].CommandId == Vehicle.TransferCommand.CommandId)
+                            txtTransferCommands[i].Font = new Font(txtTransferCommands[i].Font, FontStyle.Bold);
                     }
                 }
                 else if (transferCommands.Count > 4)
@@ -889,9 +890,10 @@ namespace Mirle.Agv.AseMiddler.View
                     for (int i = 0; i < 4; i++)
                     {
                         txtTransferCommands[i].Text = GetTransferCmdInfo(transferCommands[i]);
-                        txtTransferCommands[i].Font = new Font(txtTransferCommands[i].Font, FontStyle.Bold);
+                        if (transferCommands[i].CommandId == Vehicle.TransferCommand.CommandId)
+                            txtTransferCommands[i].Font = new Font(txtTransferCommands[i].Font, FontStyle.Bold);
                     }
-                }               
+                }
             }
             catch (Exception ex)
             {
