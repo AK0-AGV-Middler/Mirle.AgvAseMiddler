@@ -18,11 +18,14 @@ namespace Mirle.Agv.AseMiddler.Controller
         public string SectionPath { get; set; }
         public string AddressPath { get; set; }
         public string PortIdMapPath { get; set; }
+        public string AgvStationPath { get; set; }
         public string SectionBeamDisablePath { get; set; }
 
         private string lastReadAdrId = "";
         private string lastReadSecId = "";
         private string lastReadPortId = "";
+        private string failAgvStationId = "";
+        private string failAddressIdInReadAgvStationFile = "";
 
         public MapHandler()
         {
@@ -30,6 +33,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             SectionPath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.SectionFileName);
             AddressPath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.AddressFileName);
             PortIdMapPath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.PortIdMapFileName);
+            AgvStationPath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.AgvStationFileName);
             SectionBeamDisablePath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.SectionBeamDisablePathFileName);
 
             LoadMapInfo();
@@ -39,6 +43,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             ReadAddressCsv();
             ReadPortIdMapCsv();
+            ReadAgvStationCsv();
             ReadSectionCsv();
         }
 
@@ -227,6 +232,79 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             int sectionIdToInt = int.Parse(v);
             return sectionIdToInt.ToString("0000");
+        }
+
+        private void ReadAgvStationCsv()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(AgvStationPath))
+                {
+                    return;
+                }              
+
+                string[] allRows = File.ReadAllLines(AgvStationPath);
+                if (allRows == null || allRows.Length < 2)
+                {
+                    return;
+                }
+
+                string[] titleRow = allRows[0].Split(',');
+                allRows = allRows.Skip(1).ToArray();
+
+                int nRows = allRows.Length;
+                int nColumns = titleRow.Length;
+
+                Dictionary<string, int> dicHeaderIndexes = new Dictionary<string, int>();
+                for (int i = 0; i < nColumns; i++)
+                {
+                    var keyword = titleRow[i].Trim();
+                    if (!string.IsNullOrWhiteSpace(keyword))
+                    {
+                        dicHeaderIndexes.Add(keyword, i);
+                    }
+                }
+                for (int i = 0; i < nRows; i++)
+                {
+                    string[] getThisRow = allRows[i].Split(',');
+                    try
+                    {
+                        string stationId = getThisRow[dicHeaderIndexes["Id"]];
+                        failAgvStationId = stationId;
+                        string addressId = getThisRow[dicHeaderIndexes["AddressId"]];
+                        failAddressIdInReadAgvStationFile = addressId;                     
+
+                        if (Vehicle.Mapinfo.addressMap.ContainsKey(addressId))
+                        {
+                            Vehicle.Mapinfo.addressMap[addressId].AgvStationId = stationId;
+                            if (Vehicle.Mapinfo.agvStationMap.ContainsKey(stationId))
+                            {
+                                Vehicle.Mapinfo.agvStationMap[stationId].AddressIds.Add(addressId);
+                            }
+                            else
+                            {
+                                MapAgvStation agvStation = new MapAgvStation();
+                                agvStation.ID = stationId;
+                                agvStation.AddressIds.Add(addressId);
+                                Vehicle.Mapinfo.agvStationMap.Add(stationId, agvStation);
+                            }
+                        }
+                        else
+                        {
+                            throw new Exception("Address ID not in the addressMap.");
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {
+                        LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"FailStationId=[{failAgvStationId}], FailAddressId=[{failAddressIdInReadAgvStationFile}]. " + ex.Message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"lastReadPortId=[{lastReadPortId}]" + ex.Message);
+            }
         }
 
         public void ReadSectionCsv()

@@ -5,6 +5,7 @@ using Mirle.Agv.AseMiddler.Model.TransferSteps;
 using Mirle.Tools;
 using Newtonsoft.Json;
 using NLog.Layouts;
+using NUnit.Framework;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -701,6 +702,31 @@ namespace Mirle.Agv.AseMiddler.Controller
                     }
                 }
             }
+            //if (!foundNextCommand)
+            //{
+            //    foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
+            //    {
+            //        if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
+            //        {
+            //            if (transferCommand.CommandId != Vehicle.TransferCommand.CommandId)
+            //            {
+            //                if (!string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
+            //                {
+            //                    if (Vehicle.Mapinfo.agvStationMap[Vehicle.AseMoveStatus.LastAddress.AgvStationId].AddressIds.Contains(transferCommand.UnloadAddressId))
+            //                    {
+            //                        foundNextCommand = true;
+            //                        transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+            //                        Vehicle.TransferCommand = transferCommand;
+
+            //                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨檢查.儲位已滿] Vehicle slot full. Switch unlaod command.[{Vehicle.TransferCommand.CommandId}]");
+
+            //                        break;
+            //                    }
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
             if (!foundNextCommand)
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨前.檢查.失敗] Pre Load Check Fail. Slot is not Empty.");
@@ -1428,52 +1454,89 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨完成.命令選擇] Load End Optimize");
 
-                var curCmd = Vehicle.TransferCommand;
+                var transferCommands = Vehicle.mapTransferCommands.Values.ToArray();
+
+                foreach (var transferCommand in transferCommands)
+                {
+                    if (transferCommand.IsStopAndClear)
+                    {
+                        Vehicle.TransferCommand = transferCommand;
+
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨完成.命令切換.中止] Load End Stop And Clear.[{Vehicle.TransferCommand.CommandId}]");
+
+                        return;
+                    }
+                }
 
                 if (Vehicle.mapTransferCommands.Count > 1)
                 {
+                    bool isEqLoad = string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[Vehicle.TransferCommand.LoadAddressId].AgvStationId);
+
                     var minDis = DistanceFromLastPosition(Vehicle.TransferCommand.UnloadAddressId);
 
-                    foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
+                    bool foundNextCommand = false;
+
+                    foreach (var transferCommand in transferCommands)
                     {
-                        if (transferCommand.IsStopAndClear)
-                        {
-                            Vehicle.TransferCommand = transferCommand;
-
-                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨完成.命令切換] Load End Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
-
-                            break;
-                        }
-
+                        string targetAddressId = "";
                         if (transferCommand.EnrouteState == CommandState.LoadEnroute)
                         {
                             transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+                            targetAddressId = transferCommand.LoadAddressId;
+                        }
+                        else
+                        {
+                            transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                            targetAddressId = transferCommand.UnloadAddressId;
+                        }
 
-                            if (transferCommand.LoadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
+                        bool isTransferCommandToEq = string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[targetAddressId].AgvStationId);
+
+                        if (isTransferCommandToEq == isEqLoad)
+                        {
+                            if (targetAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                             {
                                 Vehicle.TransferCommand = transferCommand;
 
                                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨完成.命令切換] Load End Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
 
+                                foundNextCommand = true;
+
                                 break;
                             }
 
-                            var disTransferCommand = DistanceFromLastPosition(transferCommand.LoadAddressId);
+                            var disTransferCommand = DistanceFromLastPosition(targetAddressId);
 
                             if (disTransferCommand < minDis)
                             {
                                 minDis = disTransferCommand;
                                 Vehicle.TransferCommand = transferCommand;
 
+                                foundNextCommand = true;
+
                                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨完成.命令切換] Load End Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
                             }
-
                         }
-                        else if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
+                    }
+                    if (!foundNextCommand)
+                    {
+                        foreach (var transferCommand in transferCommands)
                         {
-                            transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                            string targetAddressId = "";
+                            if (transferCommand.EnrouteState == CommandState.LoadEnroute)
+                            {
+                                transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+                                targetAddressId = transferCommand.LoadAddressId;
+                            }
+                            else
+                            {
+                                transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                                targetAddressId = transferCommand.UnloadAddressId;
+                            }
 
-                            if (transferCommand.UnloadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
+                            bool isTransferCommandToEq = string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[targetAddressId].AgvStationId);
+
+                            if (targetAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                             {
                                 Vehicle.TransferCommand = transferCommand;
 
@@ -1482,11 +1545,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 break;
                             }
 
-                            var disTransferCommand = DistanceFromLastPosition(transferCommand.UnloadAddressId);
+                            var disTransferCommand = DistanceFromLastPosition(targetAddressId);
 
                             if (disTransferCommand < minDis)
                             {
-
                                 minDis = disTransferCommand;
                                 Vehicle.TransferCommand = transferCommand;
 
@@ -1829,6 +1891,8 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇] TransferCompleteOptimize");
 
+                bool isEqEnd = string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId);
+
                 if (!Vehicle.mapTransferCommands.IsEmpty)
                 {
                     LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令選擇.命令選取] Transfer Complete Select Another Transfer Command.");
@@ -1842,7 +1906,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                     {
                         var minDis = 999999;
 
-                        foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
+                        var transferCommands = Vehicle.mapTransferCommands.Values.ToArray();
+                        foreach (var transferCommand in transferCommands)
                         {
                             if (transferCommand.IsStopAndClear)
                             {
@@ -1850,52 +1915,84 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
 
-                                break;
+                                return;
                             }
+                        }
+
+                        bool foundNextCommand = false;
+                        foreach (var transferCommand in transferCommands)
+                        {
+                            string targetAddressId = "";
 
                             if (transferCommand.EnrouteState == CommandState.LoadEnroute)
                             {
                                 transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
-                                if (transferCommand.LoadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
-                                {
-                                    Vehicle.TransferCommand = transferCommand;
-                                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
-
-                                    break;
-                                }
-
-                                var disTransferCommand = DistanceFromLastPosition(transferCommand.LoadAddressId);
-
-                                if (disTransferCommand < minDis)
-                                {
-                                    minDis = disTransferCommand;
-                                    Vehicle.TransferCommand = transferCommand;
-
-                                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
-                                }
+                                targetAddressId = transferCommand.LoadAddressId;
                             }
-                            else if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
+                            else
                             {
                                 transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                                targetAddressId = transferCommand.UnloadAddressId;
+                            }
+                            bool isTransferCommandToEq = string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[targetAddressId].AgvStationId); ;
 
-                                if (transferCommand.UnloadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
+                            if (isTransferCommandToEq == isEqEnd)
+                            {
+                                if (targetAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                                 {
                                     Vehicle.TransferCommand = transferCommand;
-
                                     LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
-
+                                    foundNextCommand = true;
                                     break;
                                 }
 
-                                var disTransferCommand = DistanceFromLastPosition(transferCommand.UnloadAddressId);
+                                var disTransferCommand = DistanceFromLastPosition(targetAddressId);
 
                                 if (disTransferCommand < minDis)
                                 {
                                     minDis = disTransferCommand;
                                     Vehicle.TransferCommand = transferCommand;
-
+                                    foundNextCommand = true;
                                     LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
+                                }
 
+                            }
+                        }
+
+                        if (!foundNextCommand)
+                        {
+                            foreach (var transferCommand in transferCommands)
+                            {
+                                string targetAddressId = "";
+
+                                if (transferCommand.EnrouteState == CommandState.LoadEnroute)
+                                {
+                                    transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+                                    targetAddressId = transferCommand.LoadAddressId;
+                                }
+                                else
+                                {
+                                    transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                                    targetAddressId = transferCommand.UnloadAddressId;
+                                }
+                                bool isTransferCommandToEq = string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[targetAddressId].AgvStationId);
+
+                                if (targetAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
+                                {
+                                    Vehicle.TransferCommand = transferCommand;
+                                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
+                                    foundNextCommand = true;
+                                    break;
+                                }
+
+                                var disTransferCommand = DistanceFromLastPosition(targetAddressId);
+
+                                if (disTransferCommand < minDis)
+                                {
+                                    minDis = disTransferCommand;
+                                    Vehicle.TransferCommand = transferCommand;
+                                    foundNextCommand = true;
+                                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
                                 }
                             }
                         }

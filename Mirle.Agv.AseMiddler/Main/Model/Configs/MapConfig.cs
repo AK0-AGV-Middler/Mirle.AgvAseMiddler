@@ -12,6 +12,7 @@ namespace Mirle.Agv.AseMiddler.Model.Configs
         public string SectionFileName { get; set; }
         public string AddressFileName { get; set; }
         public string PortIdMapFileName { get; set; }
+        public string AgvStationFileName { get; set; }
         public string SectionBeamDisablePathFileName { get; set; }
         public double AddressAreaMm { get; set; } = 30;
     }

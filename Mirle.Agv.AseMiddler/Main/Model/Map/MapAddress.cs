@@ -5,9 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Mirle.Agv.AseMiddler.Model
-{
-
-    public class MapAddress
+{    public class MapAddress
     {
         public string Id { get; set; } = "";
         public MapPosition Position { get; set; } = new MapPosition();
@@ -17,9 +15,11 @@ namespace Mirle.Agv.AseMiddler.Model
         public EnumAddressDirection PioDirection { get; set; } = EnumAddressDirection.None;
         public bool CanSpin { get; set; }
         public bool IsTR50 { get; set; }
-        public string InsideSectionId { get; set; }
+        public string InsideSectionId { get; set; } = "";
         public MapAddressOffset AddressOffset { get; set; } = new MapAddressOffset();
         public double VehicleHeadAngle { get; set; }
+
+        public string AgvStationId { get; set; } = "";
         public Dictionary<string, MapPort> PortIdMap { get; set; } = new Dictionary<string, MapPort>();
 
         public EnumAddressDirection AddressDirectionParse(string v)
