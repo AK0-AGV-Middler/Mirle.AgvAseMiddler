@@ -41,6 +41,8 @@ namespace Mirle.Agv.AseMiddler.View
         public bool IsEnableStartChargeButton { get; set; } = false;
         public bool IsEnableStopChargeButton { get; set; } = false;
 
+        private List<TextBox> txtTransferCommands = new List<TextBox>();
+
 
         #region PaintingItems
         private Image image;
@@ -87,6 +89,7 @@ namespace Mirle.Agv.AseMiddler.View
             btnKeyInPosition.Visible = Vehicle.MainFlowConfig.IsSimulation;
             btnKeyInSoc.Visible = Vehicle.MainFlowConfig.IsSimulation;
             txtLastAlarm.Text = "";
+            txtTransferCommands = new List<TextBox>() { txtTransferCommand01, txtTransferCommand02, txtTransferCommand03, txtTransferCommand04 };
             var msg = "MainForm : 讀取主畫面";
             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
         }
@@ -836,8 +839,6 @@ namespace Mirle.Agv.AseMiddler.View
         {
             try
             {
-                ucTransferCommandEnrouteState.TagValue = Vehicle.TransferCommand.EnrouteState.ToString();
-                ucTransferCommandTransferStep.TagValue = Vehicle.TransferCommand.TransferStep.ToString();
             }
             catch (Exception ex)
             {
@@ -848,24 +849,49 @@ namespace Mirle.Agv.AseMiddler.View
         {
             try
             {
+                ucTransferCommandEnrouteState.TagValue = Vehicle.TransferCommand.EnrouteState.ToString();
+                ucTransferCommandTransferStep.TagValue = Vehicle.TransferCommand.TransferStep.ToString();
+
                 var transferCommands = Vehicle.mapTransferCommands.Values.ToList();
+
+                ucCommandCount.TagValue = transferCommands.Count.ToString();
 
                 if (transferCommands.Count == 0)
                 {
-                    tbxTransferCommand01Msg.Text = "";
-                    tbxTransferCommand02Msg.Text = "";
+                    foreach (var textBox in txtTransferCommands)
+                    {
+                        textBox.Text = "";
+                        textBox.Font = new Font(textBox.Font, FontStyle.Regular);
+                    }
+                    txtTransferCommand01.Text = GetTransferCmdInfo(Vehicle.TransferCommand);
+                    txtTransferCommand01.Font = new Font(txtTransferCommand01.Font, FontStyle.Bold);
                 }
-                else if (transferCommands.Count == 1)
+                else if (transferCommands.Count > 0 && transferCommands.Count < 5)
                 {
-                    tbxTransferCommand01Msg.Text = GetTransferCmdInfo(transferCommands[0]);
-                    tbxTransferCommand02Msg.Text = "";
+                    foreach (var textBox in txtTransferCommands)
+                    {
+                        textBox.Text = "";
+                        textBox.Font = new Font(textBox.Font, FontStyle.Regular);
+                    }
+                    for (int i = 0; i < transferCommands.Count; i++)
+                    {
+                        txtTransferCommands[i].Text = GetTransferCmdInfo(transferCommands[i]);
+                        txtTransferCommands[i].Font = new Font(txtTransferCommands[i].Font, FontStyle.Bold);
+                    }
                 }
-                else
+                else if (transferCommands.Count > 4)
                 {
-                    tbxTransferCommand01Msg.Text = GetTransferCmdInfo(transferCommands[0]);
-                    tbxTransferCommand02Msg.Text = GetTransferCmdInfo(transferCommands[1]);
-                }
-                tbxTransferStepMsg.Text = GetTransferCmdInfo(Vehicle.TransferCommand);
+                    foreach (var textBox in txtTransferCommands)
+                    {
+                        textBox.Text = "";
+                        textBox.Font = new Font(textBox.Font, FontStyle.Regular);
+                    }
+                    for (int i = 0; i < 4; i++)
+                    {
+                        txtTransferCommands[i].Text = GetTransferCmdInfo(transferCommands[i]);
+                        txtTransferCommands[i].Font = new Font(txtTransferCommands[i].Font, FontStyle.Bold);
+                    }
+                }               
             }
             catch (Exception ex)
             {
@@ -1007,9 +1033,6 @@ namespace Mirle.Agv.AseMiddler.View
 
                 string IsVehicleIdle = Vehicle.VehicleIdle.ToString();
                 ucIsVehicleIdle.TagValue = IsVehicleIdle;
-
-                string IsOptimize = Vehicle.IsOptimize.ToString();
-                ucIsOptimize.TagValue = IsOptimize;
 
                 string IsLowPower = Vehicle.LowPower.ToString();
                 ucIsLowPower.TagValue = IsLowPower;

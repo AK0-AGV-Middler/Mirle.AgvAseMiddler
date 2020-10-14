@@ -85,7 +85,7 @@ namespace Mirle.Agv.AseMiddler.View
             this.ucRobotHome = new Mirle.Agv.AseMiddler.UcLabelTextBox();
             this.ucCharging = new Mirle.Agv.AseMiddler.UcLabelTextBox();
             this.ucWifiSignalStrength = new Mirle.Agv.AseMiddler.UcLabelTextBox();
-            this.ucChargerHome = new Mirle.Agv.AseMiddler.UcLabelTextBox();
+            this.ucCommandCount = new Mirle.Agv.AseMiddler.UcLabelTextBox();
             this.ucSoc = new Mirle.Agv.AseMiddler.UcLabelTextBox();
             this.gbConnection = new System.Windows.Forms.GroupBox();
             this.txtAgvcConnection = new System.Windows.Forms.Label();
@@ -162,9 +162,10 @@ namespace Mirle.Agv.AseMiddler.View
             this.lbxNeedReserveSections = new System.Windows.Forms.ListBox();
             this.pageTransferCommand = new System.Windows.Forms.TabPage();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
-            this.tbxTransferStepMsg = new System.Windows.Forms.TextBox();
-            this.tbxTransferCommand02Msg = new System.Windows.Forms.TextBox();
-            this.tbxTransferCommand01Msg = new System.Windows.Forms.TextBox();
+            this.txtTransferCommand03 = new System.Windows.Forms.TextBox();
+            this.txtTransferCommand04 = new System.Windows.Forms.TextBox();
+            this.txtTransferCommand02 = new System.Windows.Forms.TextBox();
+            this.txtTransferCommand01 = new System.Windows.Forms.TextBox();
             this.pageSimulator = new System.Windows.Forms.TabPage();
             this.groupBox6 = new System.Windows.Forms.GroupBox();
             this.btnKeyInTestAlarm = new System.Windows.Forms.Button();
@@ -413,7 +414,7 @@ namespace Mirle.Agv.AseMiddler.View
             // 
             this.splitContainer3.Panel2.Controls.Add(this.tbxDebugLogMsg);
             this.splitContainer3.Size = new System.Drawing.Size(749, 737);
-            this.splitContainer3.SplitterDistance = 469;
+            this.splitContainer3.SplitterDistance = 319;
             this.splitContainer3.SplitterIncrement = 10;
             this.splitContainer3.TabIndex = 0;
             // 
@@ -429,12 +430,12 @@ namespace Mirle.Agv.AseMiddler.View
             // 
             // tbxDebugLogMsg
             // 
-            this.tbxDebugLogMsg.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.tbxDebugLogMsg.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tbxDebugLogMsg.Location = new System.Drawing.Point(3, 6);
             this.tbxDebugLogMsg.Multiline = true;
             this.tbxDebugLogMsg.Name = "tbxDebugLogMsg";
             this.tbxDebugLogMsg.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.tbxDebugLogMsg.Size = new System.Drawing.Size(742, 233);
+            this.tbxDebugLogMsg.Size = new System.Drawing.Size(742, 383);
             this.tbxDebugLogMsg.TabIndex = 58;
             this.tbxDebugLogMsg.WordWrap = false;
             // 
@@ -684,7 +685,7 @@ namespace Mirle.Agv.AseMiddler.View
             this.gbPerformanceCounter.Controls.Add(this.ucRobotHome);
             this.gbPerformanceCounter.Controls.Add(this.ucCharging);
             this.gbPerformanceCounter.Controls.Add(this.ucWifiSignalStrength);
-            this.gbPerformanceCounter.Controls.Add(this.ucChargerHome);
+            this.gbPerformanceCounter.Controls.Add(this.ucCommandCount);
             this.gbPerformanceCounter.Controls.Add(this.ucSoc);
             this.gbPerformanceCounter.Location = new System.Drawing.Point(222, 282);
             this.gbPerformanceCounter.Name = "gbPerformanceCounter";
@@ -770,16 +771,16 @@ namespace Mirle.Agv.AseMiddler.View
             this.ucWifiSignalStrength.TagName = "WIFI";
             this.ucWifiSignalStrength.TagValue = "";
             // 
-            // ucChargerHome
+            // ucCommandCount
             // 
-            this.ucChargerHome.Location = new System.Drawing.Point(13, 280);
-            this.ucChargerHome.Margin = new System.Windows.Forms.Padding(5, 7, 5, 7);
-            this.ucChargerHome.Name = "ucChargerHome";
-            this.ucChargerHome.Size = new System.Drawing.Size(187, 30);
-            this.ucChargerHome.TabIndex = 2;
-            this.ucChargerHome.TagColor = System.Drawing.SystemColors.ControlText;
-            this.ucChargerHome.TagName = "充電Home";
-            this.ucChargerHome.TagValue = "";
+            this.ucCommandCount.Location = new System.Drawing.Point(13, 280);
+            this.ucCommandCount.Margin = new System.Windows.Forms.Padding(5, 7, 5, 7);
+            this.ucCommandCount.Name = "ucCommandCount";
+            this.ucCommandCount.Size = new System.Drawing.Size(187, 30);
+            this.ucCommandCount.TabIndex = 2;
+            this.ucCommandCount.TagColor = System.Drawing.SystemColors.ControlText;
+            this.ucCommandCount.TagName = "命令數";
+            this.ucCommandCount.TagValue = "";
             // 
             // ucSoc
             // 
@@ -1652,9 +1653,10 @@ namespace Mirle.Agv.AseMiddler.View
             // 
             // groupBox4
             // 
-            this.groupBox4.Controls.Add(this.tbxTransferStepMsg);
-            this.groupBox4.Controls.Add(this.tbxTransferCommand02Msg);
-            this.groupBox4.Controls.Add(this.tbxTransferCommand01Msg);
+            this.groupBox4.Controls.Add(this.txtTransferCommand03);
+            this.groupBox4.Controls.Add(this.txtTransferCommand04);
+            this.groupBox4.Controls.Add(this.txtTransferCommand02);
+            this.groupBox4.Controls.Add(this.txtTransferCommand01);
             this.groupBox4.Location = new System.Drawing.Point(3, 3);
             this.groupBox4.Name = "groupBox4";
             this.groupBox4.Size = new System.Drawing.Size(603, 676);
@@ -1662,35 +1664,45 @@ namespace Mirle.Agv.AseMiddler.View
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "Transfer Command";
             // 
-            // tbxTransferStepMsg
+            // txtTransferCommand03
             // 
-            this.tbxTransferStepMsg.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.tbxTransferStepMsg.Location = new System.Drawing.Point(6, 418);
-            this.tbxTransferStepMsg.Multiline = true;
-            this.tbxTransferStepMsg.Name = "tbxTransferStepMsg";
-            this.tbxTransferStepMsg.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.tbxTransferStepMsg.Size = new System.Drawing.Size(593, 253);
-            this.tbxTransferStepMsg.TabIndex = 60;
+            this.txtTransferCommand03.Font = new System.Drawing.Font("Times New Roman", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtTransferCommand03.Location = new System.Drawing.Point(6, 349);
+            this.txtTransferCommand03.Multiline = true;
+            this.txtTransferCommand03.Name = "txtTransferCommand03";
+            this.txtTransferCommand03.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtTransferCommand03.Size = new System.Drawing.Size(290, 320);
+            this.txtTransferCommand03.TabIndex = 60;
             // 
-            // tbxTransferCommand02Msg
+            // txtTransferCommand04
             // 
-            this.tbxTransferCommand02Msg.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.tbxTransferCommand02Msg.Location = new System.Drawing.Point(6, 217);
-            this.tbxTransferCommand02Msg.Multiline = true;
-            this.tbxTransferCommand02Msg.Name = "tbxTransferCommand02Msg";
-            this.tbxTransferCommand02Msg.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.tbxTransferCommand02Msg.Size = new System.Drawing.Size(592, 195);
-            this.tbxTransferCommand02Msg.TabIndex = 59;
+            this.txtTransferCommand04.Font = new System.Drawing.Font("Times New Roman", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtTransferCommand04.Location = new System.Drawing.Point(302, 349);
+            this.txtTransferCommand04.Multiline = true;
+            this.txtTransferCommand04.Name = "txtTransferCommand04";
+            this.txtTransferCommand04.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtTransferCommand04.Size = new System.Drawing.Size(290, 320);
+            this.txtTransferCommand04.TabIndex = 59;
             // 
-            // tbxTransferCommand01Msg
+            // txtTransferCommand02
             // 
-            this.tbxTransferCommand01Msg.Font = new System.Drawing.Font("Microsoft Sans Serif", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.tbxTransferCommand01Msg.Location = new System.Drawing.Point(6, 23);
-            this.tbxTransferCommand01Msg.Multiline = true;
-            this.tbxTransferCommand01Msg.Name = "tbxTransferCommand01Msg";
-            this.tbxTransferCommand01Msg.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.tbxTransferCommand01Msg.Size = new System.Drawing.Size(592, 188);
-            this.tbxTransferCommand01Msg.TabIndex = 59;
+            this.txtTransferCommand02.Font = new System.Drawing.Font("Times New Roman", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtTransferCommand02.Location = new System.Drawing.Point(302, 23);
+            this.txtTransferCommand02.Multiline = true;
+            this.txtTransferCommand02.Name = "txtTransferCommand02";
+            this.txtTransferCommand02.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtTransferCommand02.Size = new System.Drawing.Size(290, 320);
+            this.txtTransferCommand02.TabIndex = 59;
+            // 
+            // txtTransferCommand01
+            // 
+            this.txtTransferCommand01.Font = new System.Drawing.Font("Times New Roman", 11.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txtTransferCommand01.Location = new System.Drawing.Point(6, 23);
+            this.txtTransferCommand01.Multiline = true;
+            this.txtTransferCommand01.Name = "txtTransferCommand01";
+            this.txtTransferCommand01.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtTransferCommand01.Size = new System.Drawing.Size(290, 320);
+            this.txtTransferCommand01.TabIndex = 59;
             // 
             // pageSimulator
             // 
@@ -1940,8 +1952,8 @@ namespace Mirle.Agv.AseMiddler.View
         private System.Windows.Forms.Timer timer_SetupInitialSoc;
         private System.Windows.Forms.Label txtCannotAutoReason;
         private System.Windows.Forms.TextBox tbxDebugLogMsg;
-        private System.Windows.Forms.TextBox tbxTransferCommand01Msg;
-        private System.Windows.Forms.TextBox tbxTransferStepMsg;
+        private System.Windows.Forms.TextBox txtTransferCommand01;
+        private System.Windows.Forms.TextBox txtTransferCommand03;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.Label txtBatterysAbnormal;
@@ -1991,7 +2003,7 @@ namespace Mirle.Agv.AseMiddler.View
         private System.Windows.Forms.TabPage pageReserveInfo;
         private System.Windows.Forms.TabPage pageTransferCommand;
         private System.Windows.Forms.GroupBox groupBox4;
-        private System.Windows.Forms.TextBox tbxTransferCommand02Msg;
+        private System.Windows.Forms.TextBox txtTransferCommand02;
         private UcLabelTextBox ucCurrentTransferStepType;
         private UcLabelTextBox ucErrorFlag;
         private UcLabelTextBox ucCommanding;
@@ -2019,7 +2031,7 @@ namespace Mirle.Agv.AseMiddler.View
         private System.Windows.Forms.CheckBox checkEnableToCharge;
         private UcLabelTextBox ucOpPauseFlag;
         private UcLabelTextBox ucPauseFlag;
-        private UcLabelTextBox ucChargerHome;
+        private UcLabelTextBox ucCommandCount;
         private UcLabelTextBox ucWifiSignalStrength;
         private System.Windows.Forms.TextBox txtVehiclePauseFlags;
         private System.Windows.Forms.GroupBox groupBox7;
@@ -2044,5 +2056,6 @@ namespace Mirle.Agv.AseMiddler.View
         private System.Windows.Forms.Label labException;
         private System.Windows.Forms.Label txtVisitTransferCount;
         private UcVerticalLabelText ucAddress;
+        private System.Windows.Forms.TextBox txtTransferCommand04;
     }
 }

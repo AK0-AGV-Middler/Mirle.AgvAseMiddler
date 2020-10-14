@@ -77,7 +77,6 @@ namespace Mirle.Agv.AseMiddler.Model
         public string TeachingFromAddress { get; internal set; } = "";
         public string TeachingToAddress { get; internal set; } = "";
         public VHActionStatus ActionStatus { get; set; } = VHActionStatus.NoCommand;
-        public bool IsOptimize { get; internal set; }
         public BCRReadResult LeftReadResult { get; set; } = BCRReadResult.BcrReadFail;
         public BCRReadResult RightReadResult { get; set; } = BCRReadResult.BcrReadFail;
         public VhStopSingle OpPauseStatus { get; set; } = VhStopSingle.Off;

@@ -1424,8 +1424,6 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         public void LoadEndOptimize()
         {
-            Vehicle.IsOptimize = true;
-
             try
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨完成.命令選擇] Load End Optimize");
@@ -1502,8 +1500,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
-
-            Vehicle.IsOptimize = false;
         }
 
         private int DistanceFromLastPosition(string addressId)
@@ -1829,8 +1825,6 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void TransferCompleteOptimize()
         {
-            Vehicle.IsOptimize = true;
-
             try
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇] TransferCompleteOptimize");
@@ -1917,9 +1911,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
-
-            Vehicle.IsOptimize = false;
-        }
+       }
 
         public void StopClearAndReset()
         {
@@ -2188,7 +2180,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     Vehicle.VehicleIdle = IsVehicleIdle();//200824 dabid+
                     Vehicle.LowPower = IsLowPower();//200824 dabid+stop
                     Vehicle.LowPowerStartChargeTimeout = IsLowPowerStartChargeTimeout;//200824 dabid+
-                    if (Vehicle.AutoState == EnumAutoState.Auto && IsVehicleIdle() && !Vehicle.IsOptimize && IsLowPower() && !IsLowPowerStartChargeTimeout)
+                    if (Vehicle.AutoState == EnumAutoState.Auto && IsVehicleIdle() && IsLowPower() && !IsLowPowerStartChargeTimeout)
                     {
                         LowPowerStartCharge(Vehicle.AseMoveStatus.LastAddress);
                     }
@@ -3371,7 +3363,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 lock (DebugLogMsg)
                 {
-                    DebugLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", msg, "\r\n", DebugLogMsg);
+                    DebugLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", DebugLogMsg);
 
                     if (DebugLogMsg.Length > 65535)
                     {
