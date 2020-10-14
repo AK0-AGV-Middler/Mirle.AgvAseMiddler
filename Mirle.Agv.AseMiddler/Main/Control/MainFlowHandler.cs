@@ -682,51 +682,32 @@ namespace Mirle.Agv.AseMiddler.Controller
             Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToLoad;
 
             bool foundNextCommand = false;
-            foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
+
+            if (!string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
             {
-                if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
+                if (Vehicle.Mapinfo.agvStationMap.ContainsKey(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
                 {
-                    if (transferCommand.CommandId != Vehicle.TransferCommand.CommandId)
+                    foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
                     {
-                        if (transferCommand.UnloadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
+                        if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
                         {
-                            foundNextCommand = true;
-                            transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-                            Vehicle.TransferCommand = transferCommand;
+                            if (transferCommand.CommandId != Vehicle.TransferCommand.CommandId)
+                            {
+                                if (Vehicle.Mapinfo.agvStationMap[Vehicle.AseMoveStatus.LastAddress.AgvStationId].AddressIds.Contains(transferCommand.UnloadAddressId))
+                                {
+                                    foundNextCommand = true;
+                                    transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                                    Vehicle.TransferCommand = transferCommand;
 
-                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨檢查.儲位已滿] Vehicle slot full. Switch unlaod command.[{Vehicle.TransferCommand.CommandId}]");
-
-                            break;
+                                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨檢查.儲位已滿] Vehicle slot full. Switch unlaod command.[{Vehicle.TransferCommand.CommandId}]");
+                                    break;
+                                }
+                            }
                         }
-
                     }
                 }
             }
-            //if (!foundNextCommand)
-            //{
-            //    foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
-            //    {
-            //        if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
-            //        {
-            //            if (transferCommand.CommandId != Vehicle.TransferCommand.CommandId)
-            //            {
-            //                if (!string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
-            //                {
-            //                    if (Vehicle.Mapinfo.agvStationMap[Vehicle.AseMoveStatus.LastAddress.AgvStationId].AddressIds.Contains(transferCommand.UnloadAddressId))
-            //                    {
-            //                        foundNextCommand = true;
-            //                        transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-            //                        Vehicle.TransferCommand = transferCommand;
 
-            //                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨檢查.儲位已滿] Vehicle slot full. Switch unlaod command.[{Vehicle.TransferCommand.CommandId}]");
-
-            //                        break;
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
             if (!foundNextCommand)
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨前.檢查.失敗] Pre Load Check Fail. Slot is not Empty.");
@@ -763,16 +744,41 @@ namespace Mirle.Agv.AseMiddler.Controller
             try
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Vitual Port Unload Arrival Replyed. [{Vehicle.PortInfos.Count}]");
-                Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToAddressWaitArrival;
+                Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
 
                 bool foundUnloadPort = false;
-                foreach (var item in Vehicle.PortInfos.ToArray())
+                if (!string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
                 {
-                    if (item.IsInputMode && item.IsAGVPortReady)
+                    var station = Vehicle.Mapinfo.agvStationMap[Vehicle.AseMoveStatus.LastAddress.AgvStationId];
+
+                    foreach (var portInfo in Vehicle.PortInfos.ToArray())
                     {
-                        Vehicle.TransferCommand.UnloadPortId = item.ID;
-                        foundUnloadPort = true;
-                        break;
+                        if (portInfo.IsInputMode && portInfo.IsAGVPortReady)
+                        {                           
+                            if (!Vehicle.AseMoveStatus.LastAddress.PortIdMap.ContainsKey(portInfo.ID))
+                            {
+                                foreach (var AddressId in station.AddressIds)
+                                {
+                                    if (AddressId != Vehicle.AseMoveStatus.LastAddress.Id)
+                                    {
+                                        var address = Vehicle.Mapinfo.addressMap[AddressId];
+                                        if (address.PortIdMap.ContainsKey(portInfo.ID))
+                                        {
+                                            Vehicle.TransferCommand.UnloadAddressId = AddressId;
+                                            Vehicle.TransferCommand.UnloadPortId = portInfo.ID;
+                                            foundUnloadPort = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Vehicle.TransferCommand.UnloadPortId = portInfo.ID;
+                                foundUnloadPort = true;
+                                break;
+                            }
+                        }
                     }
                 }
 
@@ -792,25 +798,33 @@ namespace Mirle.Agv.AseMiddler.Controller
             Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
 
             bool foundNextCommand = false;
-            foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
+
+            if (!string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
             {
-                if (transferCommand.EnrouteState == CommandState.LoadEnroute)
+                if (Vehicle.Mapinfo.agvStationMap.ContainsKey(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
                 {
-                    if (transferCommand.CommandId != Vehicle.TransferCommand.CommandId)
+                    foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
                     {
-                        if (transferCommand.LoadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
+                        if (transferCommand.EnrouteState == CommandState.LoadEnroute)
                         {
-                            foundNextCommand = true;
-                            transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
-                            Vehicle.TransferCommand = transferCommand;
+                            if (transferCommand.CommandId != Vehicle.TransferCommand.CommandId)
+                            {
+                                if (Vehicle.Mapinfo.agvStationMap[Vehicle.AseMoveStatus.LastAddress.AgvStationId].AddressIds.Contains(transferCommand.LoadAddressId))
+                                {
+                                    foundNextCommand = true;
+                                    transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+                                    Vehicle.TransferCommand = transferCommand;
 
-                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Vitual port unload unready. Switch Load Command. [{Vehicle.TransferCommand.CommandId}][{Vehicle.PortInfos.Count}]");
+                                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Vitual port unload unready. Switch Load Command. [{Vehicle.TransferCommand.CommandId}][{Vehicle.PortInfos.Count}]");
 
-                            break;
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
             }
+
             if (!foundNextCommand)
             {
                 Thread.Sleep(2000);
