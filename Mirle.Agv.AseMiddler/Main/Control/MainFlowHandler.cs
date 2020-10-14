@@ -1911,7 +1911,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
-       }
+        }
 
         public void StopClearAndReset()
         {
@@ -1989,6 +1989,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         case EnumAgvcTransCommandType.Unload:
                             CheckRobotPortAddress(transferCommand.UnloadAddressId, transferCommand.UnloadPortId);
                             transferCommand.SlotNumber = CheckUnloadCstId(transferCommand.CassetteId);
+                            CheckTransferCommandMap(transferCommand);
                             break;
                         case EnumAgvcTransCommandType.LoadUnload:
                             CheckRobotPortAddress(transferCommand.LoadAddressId, transferCommand.LoadPortId);
@@ -2069,39 +2070,23 @@ namespace Mirle.Agv.AseMiddler.Controller
                 throw new Exception("Vehicle has move command, can not do loadunload.");
             }
 
-            //if (Vehicle.mapTransferCommands.Count >= 3)
-            //{
-            //    throw new Exception("Vehicle has 3 or more command, can not do loadunload.");
-            //}
-
             if (Vehicle.MainFlowConfig.SlotDisable == EnumSlotSelect.Both)
             {
                 throw new Exception($"Vehicle has no empty slot to transfer cst. Left = Disable, Right = Disable.");
             }
 
-            //if (Vehicle.mapTransferCommands.Count == 1)
-            //{
-            //    if (Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.None)
-            //    {
-            //        throw new Exception($"Vehicle has no empty slot to transfer cst. Commanded and Disable.");
-            //    }
-            //}
-            //else if (Vehicle.mapTransferCommands.Count > 1)
-            //{
-            //    if (Vehicle.MainFlowConfig.TripleCommandSwap)
-            //    {
-            //        //TODO: check fit or not fit swap three command
-
-            //        if (Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.None)
-            //        {
-            //            throw new Exception($"Vehicle has no empty slot to transfer cst. Commanded and Disable.");
-            //        }
-            //    }
-            //    else
-            //    {
-            //        throw new Exception($"Vehicle has two transfer command and  TripleCommandSwap is off.");
-            //    }
-            //}
+            int existEnroute = 0;
+            foreach (var item in Vehicle.mapTransferCommands.Values.ToArray())
+            {
+                if (item.EnrouteState == transferCommand.EnrouteState)
+                {
+                    existEnroute++;
+                }
+            }
+            if (existEnroute > 1)
+            {
+                throw new Exception($"Vehicle has no enough slot to transfer. ExistEnroute[{existEnroute}]");
+            }
         }
 
         private bool IsMoveTransferCommand(EnumAgvcTransCommandType agvcTransCommandType)
