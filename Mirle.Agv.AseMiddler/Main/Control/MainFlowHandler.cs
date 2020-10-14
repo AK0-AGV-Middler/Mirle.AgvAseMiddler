@@ -668,7 +668,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitMoveArrivalVitualPortReply;
                     Vehicle.TransferCommand.IsVitualPortUnloadArrivalReply = false;
-                    agvcConnector.ReportVitualPortUnloadArrival();
+                    agvcConnector.ReportUnloadArrival();
                 }
             }
             catch (Exception ex)
@@ -1139,7 +1139,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitLoadArrivalReply;
                 Vehicle.TransferCommand.IsLoadArrivalReply = false;
-                agvcConnector.ReportLoadArrival(Vehicle.TransferCommand.CommandId, Vehicle.TransferCommand.LoadPortId);
+                agvcConnector.ReportLoadArrival();
             }
             catch (Exception ex)
             {
@@ -1173,7 +1173,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 LoadCmdInfo loadCmd = GetLoadCommand();
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.取貨] Loading, [Direction={loadCmd.PioDirection}][SlotNum={loadCmd.SlotNumber}][Load Adr={loadCmd.PortAddressId}][Load Port Num={loadCmd.PortNumber}]");
-                agvcConnector.Loading(Vehicle.TransferCommand.CommandId, Vehicle.TransferCommand.SlotNumber);
+                agvcConnector.Loading();
 
                 if (Vehicle.MainFlowConfig.IsSimulation)
                 {
@@ -1247,7 +1247,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitLoadCompleteReply;
                 ConfirmBcrReadResultInLoad(Vehicle.TransferCommand.SlotNumber);
                 Vehicle.TransferCommand.IsLoadCompleteReply = false;
-                agvcConnector.LoadComplete(Vehicle.TransferCommand.CommandId);
+                Vehicle.TransferCommand.EnrouteState = CommandState.UnloadEnroute;
+                agvcConnector.LoadComplete();
             }
             catch (Exception ex)
             {
@@ -1593,7 +1594,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitUnloadArrivalReply;
                 Vehicle.TransferCommand.IsUnloadArrivalReply = false;
-                agvcConnector.ReportUnloadArrival(Vehicle.TransferCommand.CommandId, Vehicle.TransferCommand.UnloadPortId);
+                agvcConnector.ReportUnloadArrival();
             }
             catch (Exception ex)
             {
@@ -1634,7 +1635,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 UnloadCmdInfo unloadCmd = GetUnloadCommand();
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行 放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}]");
-                agvcConnector.Unloading(Vehicle.TransferCommand.CommandId, Vehicle.TransferCommand.SlotNumber);
+                agvcConnector.Unloading();
 
                 if (Vehicle.MainFlowConfig.IsSimulation)
                 {
@@ -1715,7 +1716,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             Vehicle.TransferCommand.EnrouteState = CommandState.None;
                             Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitUnloadCompleteReply;
                             Vehicle.TransferCommand.IsUnloadCompleteReply = false;
-                            agvcConnector.UnloadComplete(Vehicle.TransferCommand.CommandId);
+                            agvcConnector.UnloadComplete();
                         }
                         break;
                     case EnumAseCarrierSlotStatus.Loading:
