@@ -2048,14 +2048,21 @@ namespace Mirle.Agv.AseMiddler.Controller
                         Vehicle.TransferCommand.IsLoadCompleteReply = true;
                         break;
                     case EventType.UnloadArrivals:
-                        if (response.PortInfos.Count == 0)
+                        if (Vehicle.TransferCommand.TransferStep == EnumTransferStep.WaitMoveArrivalVitualPortReply)
+                        {
+                            if (response.PortInfos.Count == 0)
+                            {
+                                mainFlowHandler.StopClearAndReset();
+                            }
+                            else
+                            {
+                                Vehicle.PortInfos = response.PortInfos.ToList();
+                                Vehicle.TransferCommand.IsVitualPortUnloadArrivalReply = true;
+                            }
+                        }
+                        else if (Vehicle.TransferCommand.TransferStep == EnumTransferStep.WaitUnloadArrivalReply)
                         {
                             Vehicle.TransferCommand.IsUnloadArrivalReply = true;
-                        }
-                        else
-                        {
-                            Vehicle.PortInfos = response.PortInfos.ToList();
-                            Vehicle.TransferCommand.IsVitualPortUnloadArrivalReply = true;
                         }
                         break;
                     case EventType.UnloadComplete:
@@ -2531,9 +2538,16 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 ID_11_COUPLER_INFO_REP report = (ID_11_COUPLER_INFO_REP)e.objPacket;
 
-                ModifyAddressIsCharger(report.CouplerInfos.ToList());
+                if (Vehicle.MainFlowConfig.AgreeAgvcSetCoupler)
+                {
+                    ModifyAddressIsCharger(report.CouplerInfos.ToList());
 
-                SendRecv_Cmd111_CouplerInfoResponse(e.iSeqNum, 0);
+                    SendRecv_Cmd111_CouplerInfoResponse(e.iSeqNum, (int)EnumAgvcReplyCode.Accept);
+                }
+                else
+                {
+                    SendRecv_Cmd111_CouplerInfoResponse(e.iSeqNum, (int)EnumAgvcReplyCode.Reject);
+                }
             }
             catch (Exception ex)
             {

@@ -18,8 +18,6 @@ namespace Mirle.Agv.AseMiddler.Controller
 {
     public class MainFlowHandler
     {
-        public string ThisIsInNewBranch001 { get; set; } = "";
-
         #region TransCmds
         public bool IsOverrideMove { get; set; }
         public bool IsAvoidMove { get; set; }
@@ -503,11 +501,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     if (!Vehicle.IsReAuto)
                     {
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[原地移動.到站] Same address end.");
+                        //Vehicle.AseMoveStatus.IsMoveEnd = true;
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[原地移動] Same address end.");
 
-                        Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToAddressWaitEnd;
                         Vehicle.AseMovingGuide.MoveComplete = EnumMoveComplete.Success;
-                        Vehicle.AseMoveStatus.IsMoveEnd = true;
                     }
                 }
                 else
@@ -681,6 +678,8 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void VehicleSlotFullFindFitUnloadCommand()
         {
+            Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+
             bool foundNextCommand = false;
             foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
             {
@@ -691,6 +690,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         if (transferCommand.UnloadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                         {
                             foundNextCommand = true;
+                            transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
                             Vehicle.TransferCommand = transferCommand;
 
                             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨檢查.儲位已滿] Vehicle slot full. Switch unlaod command.[{Vehicle.TransferCommand.CommandId}]");
@@ -705,9 +705,10 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨前.檢查.失敗] Pre Load Check Fail. Slot is not Empty.");
 
-                SetAlarmFromAgvm(000016);
+                //SetAlarmFromAgvm(000016);
 
-                Vehicle.TransferCommand.TransferStep = EnumTransferStep.Abort;
+                Thread.Sleep(2000);
+                //Vehicle.TransferCommand.TransferStep = EnumTransferStep.Abort;
             }
         }
 
@@ -718,6 +719,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                 if (string.IsNullOrEmpty(Vehicle.TransferCommand.UnloadPortId)) return false;
 
                 var unloadAddress = Vehicle.Mapinfo.addressMap[Vehicle.TransferCommand.UnloadAddressId];
+                if (!unloadAddress.PortIdMap.ContainsKey(Vehicle.TransferCommand.UnloadPortId))
+                {
+                    return false;
+                }
                 var unloadPort = unloadAddress.PortIdMap[Vehicle.TransferCommand.UnloadPortId];
                 if (unloadPort.IsVitualPort)
                 {
@@ -758,6 +763,8 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void VitualPortReplyUnreadyFindFitLoadCommand()
         {
+            Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+
             bool foundNextCommand = false;
             foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
             {
@@ -768,6 +775,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         if (transferCommand.LoadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                         {
                             foundNextCommand = true;
+                            transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
                             Vehicle.TransferCommand = transferCommand;
 
                             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Vitual port unload unready. Switch Load Command. [{Vehicle.TransferCommand.CommandId}][{Vehicle.PortInfos.Count}]");
@@ -1441,6 +1449,8 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                         if (transferCommand.EnrouteState == CommandState.LoadEnroute)
                         {
+                            transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+
                             if (transferCommand.LoadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                             {
                                 Vehicle.TransferCommand = transferCommand;
@@ -1463,6 +1473,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                         }
                         else if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
                         {
+                            transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+
                             if (transferCommand.UnloadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                             {
                                 Vehicle.TransferCommand = transferCommand;
@@ -1849,10 +1861,10 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             if (transferCommand.EnrouteState == CommandState.LoadEnroute)
                             {
+                                transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
                                 if (transferCommand.LoadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                                 {
                                     Vehicle.TransferCommand = transferCommand;
-
                                     LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
 
                                     break;
@@ -1870,6 +1882,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                             }
                             else if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
                             {
+                                transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+
                                 if (transferCommand.UnloadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                                 {
                                     Vehicle.TransferCommand = transferCommand;

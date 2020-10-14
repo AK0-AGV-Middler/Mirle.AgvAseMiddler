@@ -33,5 +33,6 @@ namespace Mirle.Agv.AseMiddler.Model.Configs
         public int LowPowerRepeatChargeIntervalSec { get; set; } = 3 * 60;
         public int LowPowerRepeatedlyChargeCounterMax { get; set; } = 3;
         public int SleepLowPowerWatcherSec { get; set; } = 60;
+        public bool AgreeAgvcSetCoupler { get; set; } = true;
     }
 }
