@@ -210,6 +210,11 @@ namespace Mirle.Agv.AseMiddler.Controller
                             IsVitualPort = isVitualPort
                         };
 
+                        if (!Vehicle.Mapinfo.portMap.ContainsKey(port.ID))
+                        {
+                            Vehicle.Mapinfo.portMap.Add(port.ID, port);
+                        }
+
                         if (Vehicle.Mapinfo.addressMap.ContainsKey(addressId))
                         {
                             Vehicle.Mapinfo.addressMap[addressId].PortIdMap.Add(port.ID, port);

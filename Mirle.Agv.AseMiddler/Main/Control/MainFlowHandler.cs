@@ -1170,10 +1170,23 @@ namespace Mirle.Agv.AseMiddler.Controller
                 else
                 {
                     VehicleSlotFullFindFitUnloadCommand();
+                    return;
                 }
 
                 LoadCmdInfo loadCmd = GetLoadCommand();
-                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.取貨] Loading, [Direction={loadCmd.PioDirection}][SlotNum={loadCmd.SlotNumber}][Load Adr={loadCmd.PortAddressId}][Load Port Num={loadCmd.PortNumber}]");
+                if (Vehicle.AseMoveStatus.LastAddress.Id != Vehicle.TransferCommand.LoadAddressId)
+                {
+                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+                    return;
+                }
+
+                if (loadCmd.PortNumber == "9")
+                {
+                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+                    return;
+                }
+
+                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.取貨] Loading, [Direction={loadCmd.PioDirection}][SlotNum={loadCmd.SlotNumber}][Load Adr={loadCmd.PortAddressId}][Load Port Num={loadCmd.PortNumber}][PortId = {Vehicle.TransferCommand.LoadPortId}]");
                 agvcConnector.Loading();
 
                 if (Vehicle.MainFlowConfig.IsSimulation)
@@ -1200,13 +1213,23 @@ namespace Mirle.Agv.AseMiddler.Controller
                 robotCommand.PioDirection = portAddress.PioDirection;
                 robotCommand.GateType = portAddress.GateType;
                 string portId = Vehicle.TransferCommand.LoadPortId.Trim();
-                if (string.IsNullOrEmpty(portId) || !portAddress.PortIdMap.ContainsKey(portId))
+
+                if (!Vehicle.Mapinfo.portMap.ContainsKey(portId))
                 {
                     robotCommand.PortNumber = "1";
                 }
                 else
                 {
-                    robotCommand.PortNumber = portAddress.PortIdMap[portId].Number;
+                    var port = Vehicle.Mapinfo.portMap[portId];
+                    if (port.IsVitualPort)
+                    {
+                        robotCommand.PortNumber = "9";
+                    }
+                    else
+                    {
+                        robotCommand.PortNumber = port.Number;
+                        Vehicle.TransferCommand.LoadAddressId = port.ReferenceAddressId;
+                    }
                 }
 
                 return robotCommand;
@@ -1634,8 +1657,21 @@ namespace Mirle.Agv.AseMiddler.Controller
                         break;
                 }
 
+               
                 UnloadCmdInfo unloadCmd = GetUnloadCommand();
-                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}]");
+                if (Vehicle.AseMoveStatus.LastAddress.Id != Vehicle.TransferCommand.UnloadAddressId)
+                {
+                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                    return;
+                }
+
+                if (unloadCmd.PortNumber=="9")
+                {
+                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                    return;
+                }
+
+                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}][PortId = {Vehicle.TransferCommand.UnloadPortId}]");
                 agvcConnector.Unloading();
 
                 if (Vehicle.MainFlowConfig.IsSimulation)
@@ -1663,13 +1699,22 @@ namespace Mirle.Agv.AseMiddler.Controller
                 robotCommand.GateType = portAddress.GateType;
                 string portId = Vehicle.TransferCommand.UnloadPortId.Trim();
 
-                if (string.IsNullOrEmpty(portId) || !portAddress.PortIdMap.ContainsKey(portId))
+                if (!Vehicle.Mapinfo.portMap.ContainsKey(portId))
                 {
                     robotCommand.PortNumber = "1";
                 }
                 else
                 {
-                    robotCommand.PortNumber = portAddress.PortIdMap[portId].Number;
+                    var port = Vehicle.Mapinfo.portMap[portId];
+                    if (port.IsVitualPort)
+                    {
+                        robotCommand.PortNumber = "9";
+                    }
+                    else
+                    {
+                        robotCommand.PortNumber = port.Number;
+                        Vehicle.TransferCommand.UnloadAddressId = port.ReferenceAddressId;
+                    }
                 }
 
                 return robotCommand;
@@ -2049,6 +2094,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     transCmd.IsStopAndClear = true;
                 }
+
+                Vehicle.TransferCommand.IsStopAndClear = true;
 
                 agvcConnector.StatusChangeReport();
             }
@@ -3192,7 +3239,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             Thread.Sleep(3000);  //500-->3000
                             CheckCanAuto();
                             UpdateSlotStatus();
-                            Vehicle.AseMoveStatus.IsMoveEnd = true;
+                            Vehicle.AseMoveStatus.IsMoveEnd = false;
                             break;
                         case EnumAutoState.Manual:
                             asePackage.RequestVehicleToManual();

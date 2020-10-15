@@ -15,6 +15,7 @@ namespace Mirle.Agv.AseMiddler.Model
         public List<MapAddress> chargerAddressMap = new List<MapAddress>();
         public Dictionary<string, string> gateTypeMap = new Dictionary<string, string>();
         public Dictionary<string, MapAgvStation> agvStationMap = new Dictionary<string, MapAgvStation>();
+        public Dictionary<string, MapPort> portMap = new Dictionary<string, MapPort>();
         public MapInfo()
         {
         }
