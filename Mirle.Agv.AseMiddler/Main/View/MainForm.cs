@@ -1070,7 +1070,6 @@ namespace Mirle.Agv.AseMiddler.View
                 ucIsSleepByAskReserveFail.TagValue = agvcConnector.IsSleepByAskReserveFail.ToString();
                 ucIsHome.TagValue = Vehicle.AseRobotStatus.IsHome.ToString();
                 ucIsCharging.TagValue = Vehicle.IsCharging.ToString();
-                txtVisitTransferCount.Text = mainFlowHandler.VisitTransferStepCounter.ToString();
 
                 string TMP_e = Vehicle.TMP_e;
                 labException.Text = TMP_e;

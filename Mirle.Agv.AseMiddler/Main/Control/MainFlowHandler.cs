@@ -73,7 +73,6 @@ namespace Mirle.Agv.AseMiddler.Controller
         public DateTime LowPowerStartChargeTimeStamp { get; set; } = DateTime.Now;
         public int LowPowerRepeatedlyChargeCounter { get; set; } = 0;
         public bool IsStopCharging { get; set; } = false;
-        public int VisitTransferStepCounter { get; set; } = 0;
 
         #endregion
 
@@ -494,16 +493,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令.移動.準備] MoveToAddress.[{endAddressId}].[{endReference}]");
 
                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToAddressWaitArrival;
-                Vehicle.AseMoveStatus.IsMoveEnd = false;
                 Vehicle.AseMovingGuide = new AseMovingGuide();
                 Vehicle.AseMovingGuide.ToAddressId = endAddressId;
 
                 if (endAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                 {
-                    if (!Vehicle.IsReAuto)
+                    if (Vehicle.AseMoveStatus.IsMoveEnd)
                     {
-                        //Vehicle.AseMoveStatus.IsMoveEnd = true;
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[原地移動] Same address end.");
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[原地到站] Same address end.");
 
                         Vehicle.AseMovingGuide.MoveComplete = EnumMoveComplete.Success;
                     }
@@ -520,7 +517,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[退出.站點] Move Begin.");
                         Vehicle.AseMoveStatus.IsMoveEnd = false;
                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"IsMoveEnd Need False And Cur IsMoveEnd = {Vehicle.AseMoveStatus.IsMoveEnd}");
-                        if (Vehicle.AseMoveStatus.LastAddress.TransferPortDirection != EnumAddressDirection.None) asePackage.PartMove(EnumAseMoveCommandIsEnd.Begin);
+                        if (Vehicle.AseMoveStatus.LastAddress.TransferPortDirection != EnumAddressDirection.None)
+                        {
+                            asePackage.PartMove(EnumAseMoveCommandIsEnd.Begin);
+                        }
 
                         agvcConnector.ClearAllReserve();
                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[詢問.路線] AskGuideAddressesAndSections.");
@@ -843,8 +843,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 if (Vehicle.AseMovingGuide.MoveComplete == EnumMoveComplete.Fail)
                 {
-                    //Vehicle.TransferCommand.CompleteStatus = CompleteStatus.VehicleAbort;
-                    //Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveFail;
+                    Vehicle.AseMoveStatus.IsMoveEnd = false;
                     if (Vehicle.AseMovingGuide.IsAvoidMove)
                     {
                         agvcConnector.AvoidFail();
@@ -875,9 +874,6 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 if (Vehicle.AseMovingGuide.MoveComplete == EnumMoveComplete.Success)
                 {
-
-                    Vehicle.IsReAuto = false;
-
                     if (Vehicle.AseMovingGuide.IsAvoidMove)
                     {
                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[避車.到站] AvoidMoveComplete.");
@@ -905,7 +901,16 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.LoadArrival;
                                 break;
                             case CommandState.UnloadEnroute:
-                                Vehicle.TransferCommand.TransferStep = EnumTransferStep.UnloadArrival;
+                                if (!IsFirstOrderDealVitualPort())
+                                {
+                                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.UnloadArrival;
+                                }
+                                else
+                                {
+                                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitMoveArrivalVitualPortReply;
+                                    Vehicle.TransferCommand.IsVitualPortUnloadArrivalReply = false;
+                                    agvcConnector.ReportUnloadArrival();
+                                }
                                 break;
                             default:
                                 break;
@@ -1867,7 +1872,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             try
             {
                 WaitingTransferCompleteEnd = true;
-                Vehicle.AseMoveStatus.IsMoveEnd = true;
 
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令.結束] TransferComplete. [CommandId = {Vehicle.TransferCommand.CommandId}][CompleteStatus = {Vehicle.TransferCommand.CompleteStatus}]");
 
@@ -3185,10 +3189,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                             StopClearAndReset();
                             asePackage.SetVehicleAutoScenario();
                             ResetAllAlarmsFromAgvm();
-                            Vehicle.IsReAuto = true;
                             Thread.Sleep(3000);  //500-->3000
                             CheckCanAuto();
                             UpdateSlotStatus();
+                            Vehicle.AseMoveStatus.IsMoveEnd = true;
                             break;
                         case EnumAutoState.Manual:
                             StopClearAndReset();

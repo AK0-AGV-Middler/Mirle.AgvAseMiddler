@@ -21,7 +21,7 @@ namespace Mirle.Agv.AseMiddler.Model
         public ConcurrentDictionary<string, AgvcTransferCommand> mapTransferCommands { get; set; } = new ConcurrentDictionary<string, AgvcTransferCommand>();
         public AgvcTransferCommand TransferCommand { get; set; } = new AgvcTransferCommand();
         public EnumAutoState AutoState { get; set; } = EnumAutoState.Manual;
-       
+
         public string SoftwareVersion { get; set; } = Assembly.GetExecutingAssembly().GetName().Version.ToString();
         public bool IsAgvcConnect { get; set; } = false;
         public EnumLoginLevel LoginLevel { get; set; } = EnumLoginLevel.Op;
@@ -55,7 +55,6 @@ namespace Mirle.Agv.AseMiddler.Model
         public AseMovingGuide AseMovingGuide { get; set; } = new AseMovingGuide();
         public string PspSpecVersion { get; set; } = "1.0";
 
-        public bool IsReAuto { get; set; } = true;
         public bool CheckStartChargeReplyEnd { get; set; } = true;
         public bool CheckStopChargeReplyEnd { get; set; } = true;
 

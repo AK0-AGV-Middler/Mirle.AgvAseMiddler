@@ -1876,9 +1876,9 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 Vehicle.AseMovingGuide = new AseMovingGuide(response);
                 //ClearAllReserve();
+                Vehicle.AseMoveStatus.IsMoveEnd = false;
                 mainFlowHandler.SetupAseMovingGuideMovingSections();
                 SetupNeedReserveSections();
-                Vehicle.AseMoveStatus.IsMoveEnd = false;
                 StatusChangeReport();
                 mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"IsMoveEnd Need False And Cur IsMoveEnd = {Vehicle.AseMoveStatus.IsMoveEnd.ToString()}");
 
