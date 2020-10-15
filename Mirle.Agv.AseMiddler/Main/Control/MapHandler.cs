@@ -162,10 +162,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                     return;
                 }
 
-                foreach (var address in Vehicle.Mapinfo.addressMap.Values)
-                {
-                    address.PortIdMap.Clear();
-                }
+                //foreach (var address in Vehicle.Mapinfo.addressMap.Values)
+                //{
+                //    address.PortIdMap.Clear();
+                //}
 
                 string[] allRows = File.ReadAllLines(PortIdMapPath);
                 if (allRows == null || allRows.Length < 2)
@@ -215,10 +215,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                             Vehicle.Mapinfo.portMap.Add(port.ID, port);
                         }
 
-                        if (Vehicle.Mapinfo.addressMap.ContainsKey(addressId))
-                        {
-                            Vehicle.Mapinfo.addressMap[addressId].PortIdMap.Add(port.ID, port);
-                        }
+                        //if (Vehicle.Mapinfo.addressMap.ContainsKey(addressId))
+                        //{
+                        //    Vehicle.Mapinfo.addressMap[addressId].PortIdMap.Add(port.ID, port);
+                        //}
 
                     }
                     catch (Exception ex)

@@ -2714,21 +2714,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
                 return PauseEvent.Pause;
             }
-        }
-        //private CMDCancelType CMDCancelTypeParse(string v)
-        //{
-        //    try
-        //    {
-        //        v = v.Trim();
-
-        //        return (CMDCancelType)Enum.Parse(typeof(CMDCancelType), v);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-        //        return CMDCancelType.CmdAbort;
-        //    }
-        //}
+        }       
         private ReserveResult ReserveResultParse(string v)
         {
             try
@@ -2770,59 +2756,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
                 return ErrorStatus.ErrReset;
             }
-        }
-        //private ActiveType ActiveTypeParse(string v)
-        //{
-        //    try
-        //    {
-        //        v = v.Trim();
-
-        //        return (ActiveType)Enum.Parse(typeof(ActiveType), v);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-        //        return ActiveType.Home;
-        //    }
-        //}
-        //private ControlType ControlTypeParse(string v)
-        //{
-        //    try
-        //    {
-        //        v = v.Trim();
-
-        //        return (ControlType)Enum.Parse(typeof(ControlType), v);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-        //        return ControlType.Nothing;
-        //    }
-        //}
-        private VhLoadCSTStatus VhLoadCSTStatusParse(bool loading)
-        {
-            if (loading)
-            {
-                return VhLoadCSTStatus.Exist;
-            }
-            else
-            {
-                return VhLoadCSTStatus.NotExist;
-            }
-        }
-        private BCRReadResult BCRReadResultParse(EnumCstIdReadResult readResult)
-        {
-            switch (readResult)
-            {
-                case EnumCstIdReadResult.Mismatch:
-                    return BCRReadResult.BcrMisMatch;
-                case EnumCstIdReadResult.Fail:
-                    return BCRReadResult.BcrReadFail;
-                case EnumCstIdReadResult.Normal:
-                default:
-                    return BCRReadResult.BcrNormal;
-            }
-        }
+        }        
         private VHModeStatus VHModeStatusParse(EnumAutoState autoState)
         {
             switch (autoState)
@@ -2859,25 +2793,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 return DriveDirction.DriveDirNone;
             }
         }
-        private uint BatteryCapacityParse(int originCapacity)
-        {
-            var lowPowTh = Math.Max(Math.Min(Vehicle.MainFlowConfig.LowPowerPercentage, 100), 0);
-            var highPowTh = Math.Max(Math.Min(Vehicle.MainFlowConfig.HighPowerPercentage, 100), 0);
-            if (lowPowTh >= highPowTh)
-            {
-                return (uint)originCapacity;
-            }
-            else
-            {
-                if (originCapacity > highPowTh) return 100;
-                if (originCapacity < lowPowTh) return 0;
-
-                var diff = (highPowTh - lowPowTh);
-                double temp = (originCapacity - lowPowTh) * 100.0 / diff;
-                uint result = (uint)Math.Max(Math.Min((int)temp, 100), 0);
-                return result;
-            }
-        }
+       
         #endregion
 
         #region Get/Set System Date Time

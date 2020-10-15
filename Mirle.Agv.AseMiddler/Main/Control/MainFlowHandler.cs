@@ -720,17 +720,8 @@ namespace Mirle.Agv.AseMiddler.Controller
             if (Vehicle.TransferCommand.EnrouteState == CommandState.UnloadEnroute)
             {
                 if (string.IsNullOrEmpty(Vehicle.TransferCommand.UnloadPortId)) return false;
-
-                var unloadAddress = Vehicle.Mapinfo.addressMap[Vehicle.TransferCommand.UnloadAddressId];
-                if (!unloadAddress.PortIdMap.ContainsKey(Vehicle.TransferCommand.UnloadPortId))
-                {
-                    return false;
-                }
-                var unloadPort = unloadAddress.PortIdMap[Vehicle.TransferCommand.UnloadPortId];
-                if (unloadPort.IsVitualPort)
-                {
-                    return true;
-                }
+                if (!Vehicle.Mapinfo.portMap.ContainsKey(Vehicle.TransferCommand.UnloadPortId)) return false;
+                return Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId].IsVitualPort;             
             }
             return false;
         }
@@ -743,33 +734,23 @@ namespace Mirle.Agv.AseMiddler.Controller
                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
 
                 bool foundUnloadPort = false;
-                if (!string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
+                var readyPorts = Vehicle.PortInfos.Where(portInfo => portInfo.IsInputMode && portInfo.IsAGVPortReady).ToList();
+                if (readyPorts.Any())
                 {
-                    var station = Vehicle.Mapinfo.agvStationMap[Vehicle.AseMoveStatus.LastAddress.AgvStationId];
-
-                    foreach (var portInfo in Vehicle.PortInfos.ToArray())
+                    var sameAddressReadyPorts = readyPorts.Where(portInfo => portInfo.ID == Vehicle.AseMoveStatus.LastAddress.Id).ToList();
+                    if (sameAddressReadyPorts.Any())
                     {
-                        if (portInfo.IsInputMode && portInfo.IsAGVPortReady)
+                        Vehicle.TransferCommand.UnloadPortId = sameAddressReadyPorts[0].ID;
+                        foundUnloadPort = true;
+                    }
+                    else
+                    {
+                        foreach (var portInfo in readyPorts)
                         {
-                            if (!Vehicle.AseMoveStatus.LastAddress.PortIdMap.ContainsKey(portInfo.ID))
+                            if (Vehicle.Mapinfo.portMap.ContainsKey(portInfo.ID))
                             {
-                                foreach (var AddressId in station.AddressIds)
-                                {
-                                    if (AddressId != Vehicle.AseMoveStatus.LastAddress.Id)
-                                    {
-                                        var address = Vehicle.Mapinfo.addressMap[AddressId];
-                                        if (address.PortIdMap.ContainsKey(portInfo.ID))
-                                        {
-                                            Vehicle.TransferCommand.UnloadAddressId = AddressId;
-                                            Vehicle.TransferCommand.UnloadPortId = portInfo.ID;
-                                            foundUnloadPort = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            else
-                            {
+                                var port = Vehicle.Mapinfo.portMap[portInfo.ID];
+                                Vehicle.TransferCommand.UnloadAddressId = port.ReferenceAddressId;
                                 Vehicle.TransferCommand.UnloadPortId = portInfo.ID;
                                 foundUnloadPort = true;
                                 break;
@@ -1657,7 +1638,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         break;
                 }
 
-               
+
                 UnloadCmdInfo unloadCmd = GetUnloadCommand();
                 if (Vehicle.AseMoveStatus.LastAddress.Id != Vehicle.TransferCommand.UnloadAddressId)
                 {
@@ -1665,7 +1646,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     return;
                 }
 
-                if (unloadCmd.PortNumber=="9")
+                if (unloadCmd.PortNumber == "9")
                 {
                     Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
                     return;
@@ -2294,14 +2275,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                 throw new Exception($"{portAddressId} can not unload.");
             }
 
-
-            //if (!string.IsNullOrEmpty(portId))
-            //{
-            //    if (!portAddress.PortIdMap.ContainsKey(portId))
-            //    {
-            //        throw new Exception($"Port Address [{portAddressId}] and Port ID [{portId}] are not fit.");
-            //    }
-            //}
+            if (Vehicle.Mapinfo.portMap.ContainsKey(portId))
+            {
+                var port = Vehicle.Mapinfo.portMap[portId];
+                if (port.ReferenceAddressId != portAddressId)
+                {
+                    throw new Exception($"{portAddressId} unmatch {portId}.");
+                }
+            }
         }
 
         private void CheckMoveEndAddress(string unloadAddressId)
@@ -2331,7 +2312,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     {
                         LowPowerStartCharge(Vehicle.AseMoveStatus.LastAddress);
                     }
-                    if (Vehicle.AseBatteryStatus.Percentage < Vehicle.MainFlowConfig.LowPowerPercentage - 11 && !Vehicle.IsCharging) //200701 dabid+
+                    if (Vehicle.AseBatteryStatus.Percentage < Vehicle.MainFlowConfig.HighPowerPercentage - 21 && !Vehicle.IsCharging) //200701 dabid+
                     {
                         SetAlarmFromAgvm(2);
                     }
