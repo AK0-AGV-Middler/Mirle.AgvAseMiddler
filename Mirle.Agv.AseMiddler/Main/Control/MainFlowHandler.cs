@@ -241,9 +241,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 asePackage.ImportantPspLog += AsePackage_ImportantPspLog;
 
                 //來自IRobotControl的取放貨結束訊息, Send to MainFlow(this)'middleAgent'mapHandler
-                //asePackage.OnRobotInterlockErrorEvent += AsePackage_OnRobotInterlockErrorEvent;
-                //asePackage.OnRobotCommandFinishEvent += AsePackage_OnRobotCommandFinishEvent;
-                //asePackage.OnRobotCommandErrorEvent += AsePackage_OnRobotCommandErrorEvent;
                 asePackage.OnRobotEndEvent += AsePackage_OnRobotEndEvent;
 
                 //來自IBatterysControl的電量改變訊息, Send to middleAgent
@@ -330,16 +327,15 @@ namespace Mirle.Agv.AseMiddler.Controller
             while (true)
             {
                 try
-                {
-                    if (IsVisitTransferStepPause)
-                    {
-                        Thread.Sleep(Vehicle.MainFlowConfig.VisitTransferStepsSleepTimeMs);
-                        continue;
-                    }
-
+                {                 
                     if (Vehicle.TransferCommand.IsStopAndClear)
                     {
                         ClearTransferTransferCommand();
+                    }
+                    else if (IsVisitTransferStepPause)
+                    {
+                        Thread.Sleep(Vehicle.MainFlowConfig.VisitTransferStepsSleepTimeMs);
+                        continue;
                     }
 
                     switch (Vehicle.TransferCommand.TransferStep)
@@ -1840,6 +1836,8 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 Vehicle.TransferCommand.CompleteStatus = CompleteStatus.VehicleAbort;
             }
+
+            TransferCommandComplete();
         }
 
         private void Idle()
@@ -2316,12 +2314,12 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private bool IsLowPower()
         {
-            return Vehicle.AseBatteryStatus.Percentage <= Vehicle.MainFlowConfig.LowPowerPercentage;
+            return Vehicle.AseBatteryStatus.Percentage <= Vehicle.MainFlowConfig.HighPowerPercentage;
         }
 
         private bool IsHighPower()
         {
-            return Vehicle.AseBatteryStatus.Percentage >= Vehicle.MainFlowConfig.HighPowerPercentage;
+            return Vehicle.AseBatteryStatus.Percentage > Vehicle.MainFlowConfig.HighPowerPercentage;
         }
 
         public void MainFormStartCharge()
@@ -2342,7 +2340,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     if (IsHighPower())
                     {
-                        var msg = $"Vehicle arrival {address.Id},Charge Direction = {address.ChargeDirection},Precentage = {percentage} > {highPercentage}(High Threshold),  thus NOT send charge command.";
+                        var msg = $"Vehicle arrival {address.Id},Charge Direction = {address.ChargeDirection},Precentage = {percentage} > {highPercentage}(Threshold),  thus NOT send charge command.";
                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
                         return;
                     }
@@ -2425,7 +2423,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     }
                     else
                     {
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[低電量閒置 自動充電] Addr = {address.Id},Precentage = {percentage} < {Vehicle.MainFlowConfig.LowPowerPercentage}(Low Threshold).");
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[低電量閒置.自動充電] Addr = {address.Id},Precentage = {percentage} < {Vehicle.MainFlowConfig.HighPowerPercentage}(Threshold).");
                     }
 
                     if ((DateTime.Now - LowPowerStartChargeTimeStamp).TotalSeconds >= Vehicle.MainFlowConfig.LowPowerRepeatChargeIntervalSec)
@@ -3181,12 +3179,13 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
+                StopClearAndReset();
+
                 if (Vehicle.AutoState != autoState)
                 {
                     switch (autoState)
                     {
                         case EnumAutoState.Auto:
-                            StopClearAndReset();
                             asePackage.SetVehicleAutoScenario();
                             ResetAllAlarmsFromAgvm();
                             Thread.Sleep(3000);  //500-->3000
@@ -3195,7 +3194,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                             Vehicle.AseMoveStatus.IsMoveEnd = true;
                             break;
                         case EnumAutoState.Manual:
-                            StopClearAndReset();
                             asePackage.RequestVehicleToManual();
                             break;
                         case EnumAutoState.None:
