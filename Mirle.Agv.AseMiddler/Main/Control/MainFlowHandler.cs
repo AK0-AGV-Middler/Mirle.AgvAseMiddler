@@ -1802,7 +1802,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void AgvcConnector_OnSendRecvTimeoutEvent(object sender, EventArgs e)
         {
-            SetAlarmFromAgvm(38);
+           // SetAlarmFromAgvm(38);
         }
 
         private void AgvcConnector_OnCstRenameEvent(object sender, EnumSlotNumber slotNumber)
