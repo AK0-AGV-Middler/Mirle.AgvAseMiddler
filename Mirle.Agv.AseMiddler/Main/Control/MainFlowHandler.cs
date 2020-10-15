@@ -327,7 +327,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             while (true)
             {
                 try
-                {                 
+                {
                     if (Vehicle.TransferCommand.IsStopAndClear)
                     {
                         ClearTransferTransferCommand();
@@ -1199,14 +1199,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LoadCmdInfo robotCommand = new LoadCmdInfo(Vehicle.TransferCommand);
                 robotCommand.PioDirection = portAddress.PioDirection;
                 robotCommand.GateType = portAddress.GateType;
-
-                if (string.IsNullOrEmpty(Vehicle.TransferCommand.LoadPortId) || !portAddress.PortIdMap.ContainsKey(Vehicle.TransferCommand.LoadPortId))
+                string portId = Vehicle.TransferCommand.LoadPortId.Trim();
+                if (string.IsNullOrEmpty(portId) || !portAddress.PortIdMap.ContainsKey(portId))
                 {
                     robotCommand.PortNumber = "1";
                 }
                 else
                 {
-                    robotCommand.PortNumber = portAddress.PortIdMap[Vehicle.TransferCommand.LoadPortId].Number;
+                    robotCommand.PortNumber = portAddress.PortIdMap[portId].Number;
                 }
 
                 return robotCommand;
@@ -1617,7 +1617,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     case EnumSlotNumber.L:
                         if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty)
                         {
-                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放貨前 檢查 失敗] Pre Unload Check Fail. Slot is Empty.");
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放貨前.檢查.失敗] Pre Unload Check Fail. Slot is Empty.");
 
                             SetAlarmFromAgvm(000017);
                             return;
@@ -1626,7 +1626,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     case EnumSlotNumber.R:
                         if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty)
                         {
-                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放貨前 檢查 失敗] Pre Unload Check Fail. Slot is Empty.");
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放貨前.檢查.失敗] Pre Unload Check Fail. Slot is Empty.");
 
                             SetAlarmFromAgvm(000017);
                             return;
@@ -1635,7 +1635,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 }
 
                 UnloadCmdInfo unloadCmd = GetUnloadCommand();
-                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行 放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}]");
+                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}]");
                 agvcConnector.Unloading();
 
                 if (Vehicle.MainFlowConfig.IsSimulation)
@@ -1659,16 +1659,17 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 MapAddress portAddress = Vehicle.Mapinfo.addressMap[Vehicle.TransferCommand.UnloadAddressId];
                 UnloadCmdInfo robotCommand = new UnloadCmdInfo(Vehicle.TransferCommand);
-                robotCommand.PioDirection = portAddress.PioDirection;
+                robotCommand.PioDirection = EnumAddressDirection.Right;
                 robotCommand.GateType = portAddress.GateType;
+                string portId = Vehicle.TransferCommand.UnloadPortId.Trim();
 
-                if (string.IsNullOrEmpty(Vehicle.TransferCommand.UnloadPortId) || !portAddress.PortIdMap.ContainsKey(Vehicle.TransferCommand.UnloadPortId))
+                if (string.IsNullOrEmpty(portId) || !portAddress.PortIdMap.ContainsKey(portId))
                 {
                     robotCommand.PortNumber = "1";
                 }
                 else
                 {
-                    robotCommand.PortNumber = portAddress.PortIdMap[Vehicle.TransferCommand.UnloadPortId].Number;
+                    robotCommand.PortNumber = portAddress.PortIdMap[portId].Number;
                 }
 
                 return robotCommand;
@@ -1803,7 +1804,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void AgvcConnector_OnSendRecvTimeoutEvent(object sender, EventArgs e)
         {
-           // SetAlarmFromAgvm(38);
+            // SetAlarmFromAgvm(38);
         }
 
         private void AgvcConnector_OnCstRenameEvent(object sender, EnumSlotNumber slotNumber)
