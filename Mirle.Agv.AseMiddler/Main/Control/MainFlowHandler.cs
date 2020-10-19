@@ -2062,9 +2062,8 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[停止.重置] Stop.Clear.Reset.");
 
+                Thread.Sleep(500);
                 agvcConnector.ClearAllReserve();
-                Vehicle.AseMovingGuide = new AseMovingGuide();
-                StopVehicle();
 
                 if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Loading || Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Loading)
                 {
@@ -2077,6 +2076,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                 }
 
                 Vehicle.TransferCommand.IsStopAndClear = true;
+
+                StopVehicle();
 
                 agvcConnector.StatusChangeReport();
             }

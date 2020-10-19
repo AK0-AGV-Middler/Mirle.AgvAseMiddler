@@ -2185,31 +2185,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-        private void SendRecv_Cmd136_TransferEventReport(EventType eventType, string cmdId, EnumSlotNumber slotNumber)
-        {
-            try
-            {
-                ID_136_TRANS_EVENT_REP report = new ID_136_TRANS_EVENT_REP();
-                report.EventType = eventType;
-                report.CurrentAdrID = Vehicle.AseMoveStatus.LastAddress.Id;
-                report.CurrentSecID = Vehicle.AseMoveStatus.LastSection.Id;
-                report.SecDistance = (uint)Vehicle.AseMoveStatus.LastSection.VehicleDistanceSinceHead;
-                report.CmdID = cmdId;
-                report.Location = slotNumber == EnumSlotNumber.L ? AGVLocation.Left : AGVLocation.Right;
-
-                WrapperMessage wrapper = new WrapperMessage();
-                wrapper.ID = WrapperMessage.ImpTransEventRepFieldNumber;
-                wrapper.ImpTransEventRep = report;
-
-                SendWrapperToSchedule(wrapper, false, true);
-
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Send transfer event report success. [{eventType}]");
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
-        }
         public void SendRecv_Cmd136_CstIdReadReport()
         {
             AseMoveStatus aseMoveStatus = new AseMoveStatus(Vehicle.AseMoveStatus);
