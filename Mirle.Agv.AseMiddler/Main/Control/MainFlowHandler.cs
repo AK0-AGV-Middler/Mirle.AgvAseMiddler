@@ -1676,7 +1676,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 MapAddress portAddress = Vehicle.Mapinfo.addressMap[Vehicle.TransferCommand.UnloadAddressId];
                 UnloadCmdInfo robotCommand = new UnloadCmdInfo(Vehicle.TransferCommand);
-                robotCommand.PioDirection = EnumAddressDirection.Right;
+                robotCommand.PioDirection = portAddress.PioDirection;
                 robotCommand.GateType = portAddress.GateType;
                 string portId = Vehicle.TransferCommand.UnloadPortId.Trim();
 
