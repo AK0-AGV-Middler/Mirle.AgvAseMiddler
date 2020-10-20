@@ -3207,38 +3207,43 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
+        public object _ModeChangeLocker = new object();
+
         public void AsePackage_OnModeChangeEvent(object sender, EnumAutoState autoState)
         {
             try
             {
-                StopClearAndReset();
-
-                if (Vehicle.AutoState != autoState)
+                lock (_ModeChangeLocker)
                 {
-                    switch (autoState)
+                    StopClearAndReset();
+
+                    if (Vehicle.AutoState != autoState)
                     {
-                        case EnumAutoState.Auto:
-                            asePackage.SetVehicleAutoScenario();
-                            ResetAllAlarmsFromAgvm();
-                            Thread.Sleep(3000);  //500-->3000
-                            CheckCanAuto();
-                            UpdateSlotStatus();
-                            Vehicle.AseMoveStatus.IsMoveEnd = false;
-                            break;
-                        case EnumAutoState.Manual:
-                            asePackage.RequestVehicleToManual();
-                            break;
-                        case EnumAutoState.None:
-                            break;
-                        default:
-                            break;
+                        switch (autoState)
+                        {
+                            case EnumAutoState.Auto:
+                                asePackage.SetVehicleAutoScenario();
+                                ResetAllAlarmsFromAgvm();
+                                Thread.Sleep(3000);  //500-->3000
+                                CheckCanAuto();
+                                UpdateSlotStatus();
+                                Vehicle.AseMoveStatus.IsMoveEnd = false;
+                                break;
+                            case EnumAutoState.Manual:
+                                asePackage.RequestVehicleToManual();
+                                break;
+                            case EnumAutoState.None:
+                                break;
+                            default:
+                                break;
+                        }
+
+                        Vehicle.AutoState = autoState;
+                        agvcConnector.StatusChangeReport();
+
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Switch to {autoState}");
                     }
                 }
-
-                Vehicle.AutoState = autoState;
-                agvcConnector.StatusChangeReport();
-
-                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Switch to {autoState}");
             }
             catch (Exception ex)
             {
