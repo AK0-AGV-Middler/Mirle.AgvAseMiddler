@@ -19,6 +19,8 @@ namespace Mirle.Agv.AseMiddler.Controller
 {
     public class MainFlowHandler
     {
+        public int xxx1 { get; set; }
+
         #region TransCmds
         public bool IsOverrideMove { get; set; }
         public bool IsAvoidMove { get; set; }
@@ -723,7 +725,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 if (string.IsNullOrEmpty(Vehicle.TransferCommand.UnloadPortId)) return false;
                 if (!Vehicle.Mapinfo.portMap.ContainsKey(Vehicle.TransferCommand.UnloadPortId)) return false;
-                return Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId].IsVitualPort;             
+                return Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId].IsVitualPort;
             }
             return false;
         }
