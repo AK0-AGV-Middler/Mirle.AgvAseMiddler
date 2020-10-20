@@ -19,7 +19,6 @@ using System.Windows.Forms.VisualStyles;
 
 namespace Mirle.Agv.AseMiddler.Controller
 {
-
     public class AgvcConnector
     {
         #region Events
@@ -1336,7 +1335,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         }
         public void ReportLoadArrival()
         {
-            SendRecv_Cmd136_TransferEventReport(EventType.LoadArrivals,Vehicle.TransferCommand.LoadPortId);
+            SendRecv_Cmd136_TransferEventReport(EventType.LoadArrivals, Vehicle.TransferCommand.LoadPortId);
         }
         public void Loading()
         {
@@ -1347,9 +1346,9 @@ namespace Mirle.Agv.AseMiddler.Controller
             SendRecv_Cmd132_TransferCompleteReport(transferCommand, (int)EnumAgvcReplyCode.Accept);
         }
         public void LoadComplete()
-        {          
+        {
             StatusChangeReport();
-            SendRecv_Cmd136_TransferEventReport(EventType.LoadComplete,Vehicle.TransferCommand.LoadPortId);
+            SendRecv_Cmd136_TransferEventReport(EventType.LoadComplete, Vehicle.TransferCommand.LoadPortId);
         }
         public void ReportUnloadArrival()
         {
@@ -1360,7 +1359,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             Send_Cmd136_TransferEventReport(EventType.Vhunloading, Vehicle.TransferCommand.CommandId, Vehicle.TransferCommand.SlotNumber, Vehicle.TransferCommand.UnloadPortId);
         }
         public void UnloadComplete()
-        {         
+        {
             StatusChangeReport();
             SendRecv_Cmd136_TransferEventReport(EventType.UnloadComplete, Vehicle.TransferCommand.UnloadPortId);
         }
@@ -2159,7 +2158,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-        private void SendRecv_Cmd136_TransferEventReport(EventType eventType,string portId)
+        private void SendRecv_Cmd136_TransferEventReport(EventType eventType, string portId)
         {
             try
             {
@@ -2689,7 +2688,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
                 return PauseEvent.Pause;
             }
-        }       
+        }
         private ReserveResult ReserveResultParse(string v)
         {
             try
@@ -2731,7 +2730,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
                 return ErrorStatus.ErrReset;
             }
-        }        
+        }
         private VHModeStatus VHModeStatusParse(EnumAutoState autoState)
         {
             switch (autoState)
@@ -2768,7 +2767,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 return DriveDirction.DriveDirNone;
             }
         }
-       
+
         #endregion
 
         #region Get/Set System Date Time

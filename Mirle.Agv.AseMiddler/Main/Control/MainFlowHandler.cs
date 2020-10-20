@@ -331,6 +331,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                     if (Vehicle.TransferCommand.IsStopAndClear)
                     {
                         ClearTransferTransferCommand();
+                        Thread.Sleep(Vehicle.MainFlowConfig.VisitTransferStepsSleepTimeMs);
+                        continue;
                     }
                     else if (IsVisitTransferStepPause)
                     {
