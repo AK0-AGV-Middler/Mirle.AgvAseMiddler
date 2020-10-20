@@ -19,8 +19,6 @@ namespace Mirle.Agv.AseMiddler.Controller
 {
     public class MainFlowHandler
     {
-        public int xxx1 { get; set; }
-
         #region TransCmds
         public bool IsOverrideMove { get; set; }
         public bool IsAvoidMove { get; set; }
