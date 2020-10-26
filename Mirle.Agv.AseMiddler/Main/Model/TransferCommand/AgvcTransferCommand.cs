@@ -151,6 +151,19 @@ namespace Mirle.Agv.AseMiddler.Model
                     return false;
             }
         }
+
+        public string EnrouteAddressId()
+        {
+            switch (EnrouteState)
+            {
+                case CommandState.UnloadEnroute:
+                case CommandState.None:
+                    return UnloadAddressId.Trim();
+                case CommandState.LoadEnroute:
+                    return LoadAddressId.Trim();
+            }
+            return "";
+        }
     }
 
     //public class AgvcMoveCmd : AgvcTransCmd

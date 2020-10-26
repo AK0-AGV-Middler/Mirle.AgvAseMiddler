@@ -1172,6 +1172,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.取貨] Loading, [Direction={loadCmd.PioDirection}][SlotNum={loadCmd.SlotNumber}][Load Adr={loadCmd.PortAddressId}][Load Port Num={loadCmd.PortNumber}][PortId = {Vehicle.TransferCommand.LoadPortId}]");
                 agvcConnector.Loading();
 
+                CheckTimerStopChargeInRobotStep();
+
                 if (Vehicle.MainFlowConfig.IsSimulation)
                 {
                     SimulationLoad();
@@ -1640,7 +1642,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                         break;
                 }
 
-
                 UnloadCmdInfo unloadCmd = GetUnloadCommand();
                 if (Vehicle.AseMoveStatus.LastAddress.Id != Vehicle.TransferCommand.UnloadAddressId)
                 {
@@ -1657,6 +1658,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}][PortId = {Vehicle.TransferCommand.UnloadPortId}]");
                 agvcConnector.Unloading();
 
+                CheckTimerStopChargeInRobotStep();
+
                 if (Vehicle.MainFlowConfig.IsSimulation)
                 {
                     SimulationUnload();
@@ -1665,6 +1668,49 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     Task.Run(() => asePackage.DoRobotCommand(unloadCmd));
                 }
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
+        private void CheckTimerStopChargeInRobotStep()
+        {
+            try
+            {
+                var otherCommands = Vehicle.mapTransferCommands.Values.Where(x => x.CommandId.Trim() != Vehicle.TransferCommand.CommandId.Trim()).ToList();
+                if (!otherCommands.Any())
+                {
+                    TimerStopChargeInRobotStep();
+                }
+                else
+                {
+                    var sameAddressCommands = otherCommands.Where(x => x.EnrouteAddressId() == Vehicle.AseMoveStatus.LastAddress.Id).ToList();
+                    if (!sameAddressCommands.Any())
+                    {
+                        TimerStopChargeInRobotStep();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
+        private void TimerStopChargeInRobotStep()
+        {
+            try
+            {
+                Task.Run(() =>
+                {
+                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[手臂命令.提早斷充] : ChargeIntervalInRobotingSec [ChargeTimeSec = {Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec}].");
+
+                    SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec);
+
+                    StopCharge();
+                });
             }
             catch (Exception ex)
             {
@@ -2621,34 +2667,35 @@ namespace Mirle.Agv.AseMiddler.Controller
             try
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[到站.充電] : ArrivalStartCharge.");
-                int chargeTimeSec = -1;
-                if (IsMoveEndRobotStep())
-                {
-                    int sameAddressRobotCommand = 0;
-                    foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
-                    {
-                        if (transferCommand.EnrouteState == CommandState.LoadEnroute)
-                        {
-                            if (transferCommand.LoadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
-                            {
-                                sameAddressRobotCommand++;
-                            }
-                        }
-                        else if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
-                        {
-                            if (transferCommand.UnloadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
-                            {
-                                sameAddressRobotCommand++;
-                            }
-                        }
-                    }
-                    chargeTimeSec = Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec * sameAddressRobotCommand;
-                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[手臂命令.提早斷充] : ChargeIntervalInRobotingSec [RobotStepCount ={sameAddressRobotCommand}][ChargeTimeSec = {chargeTimeSec}].");
-                }
+                //int chargeTimeSec = -1;
+                //if (IsMoveEndRobotStep())
+                //{
+                //    int sameAddressRobotCommand = 0;
+                //    foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
+                //    {
+                //        if (transferCommand.EnrouteState == CommandState.LoadEnroute)
+                //        {
+                //            if (transferCommand.LoadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
+                //            {
+                //                sameAddressRobotCommand++;
+                //            }
+                //        }
+                //        else if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
+                //        {
+                //            if (transferCommand.UnloadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
+                //            {
+                //                sameAddressRobotCommand++;
+                //            }
+                //        }
+                //    }
+                //    chargeTimeSec = Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec * sameAddressRobotCommand;
+                //    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[手臂命令.提早斷充] : ChargeIntervalInRobotingSec [RobotStepCount ={sameAddressRobotCommand}][ChargeTimeSec = {chargeTimeSec}].");
+                //}
 
                 Task.Run(() =>
                 {
-                    StartCharge(endAddress, chargeTimeSec);
+                    //StartCharge(endAddress, chargeTimeSec);
+                    StartCharge(endAddress);
                 });
             }
             catch (Exception ex)
