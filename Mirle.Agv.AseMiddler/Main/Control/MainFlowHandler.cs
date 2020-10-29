@@ -1948,7 +1948,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令.結束] TransferComplete. [CommandId = {Vehicle.TransferCommand.CommandId}][CompleteStatus = {Vehicle.TransferCommand.CompleteStatus}]");
 
-                if (!alarmHandler.dicHappeningAlarms.IsEmpty)
+                if (!alarmHandler.dicHappeningAlarms.IsEmpty && !Vehicle.TransferCommand.IsAbortByAgvc())
                 {
                     ResetAllAlarmsFromAgvm();
                 }
@@ -2285,15 +2285,19 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void CheckEnoughSamePortTypeCommandsFromPortId(AgvcTransferCommand transferCommand, CommandState enroute)
         {
-            var isAgvStation = IsAgvStationFromPortId(transferCommand,enroute);
+            //var isAgvStation = IsAgvStationFromPortId(transferCommand,enroute);
 
-            var samePortTypeCommands = (from command in Vehicle.mapTransferCommands.Values.ToArray()
-                                            where IsAgvStationFromPortId(command,enroute) == isAgvStation
-                                            select (command)).ToList();
-            if (samePortTypeCommands.Count >= 2)
+            if (IsAgvStationFromPortId(transferCommand, enroute))
             {
-                throw new Exception($"Vehicle has no enough slot to transfer. [SamePortTypeCommands={samePortTypeCommands.Count}][enroute={enroute}]");
-            }
+                var samePortTypeCommands = (from command in Vehicle.mapTransferCommands.Values.ToArray()
+                                            where IsAgvStationFromPortId(command, enroute) /*== isAgvStation*/
+                                            select (command)).ToList();
+
+                if (samePortTypeCommands.Count >= 2)
+                {
+                    throw new Exception($"Vehicle has no enough slot to transfer. [SamePortTypeCommands={samePortTypeCommands.Count}][enroute={enroute}]");
+                }
+            }            
         }
 
         private bool IsAgvStationFromPortId(AgvcTransferCommand transferCommand, CommandState enroute)
@@ -3302,7 +3306,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                         {
                             case EnumAutoState.Auto:
                                 asePackage.SetVehicleAutoScenario();
-                                ResetAllAlarmsFromAgvm();
                                 Thread.Sleep(3000);  //500-->3000
                                 CheckCanAuto();
                                 UpdateSlotStatus();
@@ -3318,6 +3321,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                         }
 
                         Vehicle.AutoState = autoState;
+                        if(autoState == EnumAutoState.Auto) ResetAllAlarmsFromAgvm();
+
                         agvcConnector.StatusChangeReport();
 
                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Switch to {autoState}");
