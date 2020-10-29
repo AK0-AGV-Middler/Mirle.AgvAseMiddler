@@ -162,10 +162,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     return;
                 }
 
-                //foreach (var address in Vehicle.Mapinfo.addressMap.Values)
-                //{
-                //    address.PortIdMap.Clear();
-                //}
+                Vehicle.Mapinfo.portMap.Clear();
 
                 string[] allRows = File.ReadAllLines(PortIdMapPath);
                 if (allRows == null || allRows.Length < 2)
@@ -202,24 +199,25 @@ namespace Mirle.Agv.AseMiddler.Controller
                         {
                             isVitualPort = bool.Parse(getThisRow[dicHeaderIndexes["IsVitualPort"]]);
                         }
+                        string agvStationId = "";
+                        if (dicHeaderIndexes.ContainsKey("AgvStationId"))
+                        {
+                            agvStationId = string.IsNullOrEmpty(getThisRow[dicHeaderIndexes["IsVitualPort"]]) ?"": getThisRow[dicHeaderIndexes["IsVitualPort"]].Trim();
+                        }
+
                         MapPort port = new MapPort()
                         {
                             ID = portId,
                             ReferenceAddressId = addressId,
                             Number = portNumber,
-                            IsVitualPort = isVitualPort
+                            IsVitualPort = isVitualPort,
+                            AgvStationId = agvStationId
                         };
 
                         if (!Vehicle.Mapinfo.portMap.ContainsKey(port.ID))
                         {
                             Vehicle.Mapinfo.portMap.Add(port.ID, port);
                         }
-
-                        //if (Vehicle.Mapinfo.addressMap.ContainsKey(addressId))
-                        //{
-                        //    Vehicle.Mapinfo.addressMap[addressId].PortIdMap.Add(port.ID, port);
-                        //}
-
                     }
                     catch (Exception ex)
                     {
@@ -246,7 +244,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 if (string.IsNullOrWhiteSpace(AgvStationPath))
                 {
                     return;
-                }              
+                }
 
                 string[] allRows = File.ReadAllLines(AgvStationPath);
                 if (allRows == null || allRows.Length < 2)
@@ -277,7 +275,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         string stationId = getThisRow[dicHeaderIndexes["Id"]];
                         failAgvStationId = stationId;
                         string addressId = getThisRow[dicHeaderIndexes["AddressId"]];
-                        failAddressIdInReadAgvStationFile = addressId;                     
+                        failAddressIdInReadAgvStationFile = addressId;
 
                         if (Vehicle.Mapinfo.addressMap.ContainsKey(addressId))
                         {

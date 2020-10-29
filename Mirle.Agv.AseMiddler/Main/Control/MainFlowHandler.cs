@@ -2267,18 +2267,50 @@ namespace Mirle.Agv.AseMiddler.Controller
                 throw new Exception($"Vehicle has no empty slot to transfer cst. Left = Disable, Right = Disable.");
             }
 
-            int existEnroute = 0;
-            foreach (var item in Vehicle.mapTransferCommands.Values.ToArray())
+            if (transferCommand.AgvcTransCommandType == EnumAgvcTransCommandType.Load)
             {
-                if (item.EnrouteState == transferCommand.EnrouteState)
+                CheckEnoughSamePortTypeCommandsFromPortId(transferCommand, CommandState.LoadEnroute);
+            }
+            else if (transferCommand.AgvcTransCommandType == EnumAgvcTransCommandType.Unload)
+            {
+                CheckEnoughSamePortTypeCommandsFromPortId(transferCommand, CommandState.UnloadEnroute);
+            }
+            else if (transferCommand.AgvcTransCommandType == EnumAgvcTransCommandType.LoadUnload)
+            {
+                CheckEnoughSamePortTypeCommandsFromPortId(transferCommand, CommandState.LoadEnroute);
+
+                CheckEnoughSamePortTypeCommandsFromPortId(transferCommand, CommandState.UnloadEnroute);
+            }
+        }
+
+        private void CheckEnoughSamePortTypeCommandsFromPortId(AgvcTransferCommand transferCommand, CommandState enroute)
+        {
+            var isAgvStation = IsAgvStationFromPortId(transferCommand,enroute);
+
+            var samePortTypeCommands = (from command in Vehicle.mapTransferCommands.Values.ToArray()
+                                            where IsAgvStationFromPortId(command,enroute) == isAgvStation
+                                            select (command)).ToList();
+            if (samePortTypeCommands.Count >= 2)
+            {
+                throw new Exception($"Vehicle has no enough slot to transfer. [SamePortTypeCommands={samePortTypeCommands.Count}][enroute={enroute}]");
+            }
+        }
+
+        private bool IsAgvStationFromPortId(AgvcTransferCommand transferCommand, CommandState enroute)
+        {
+            var portId = enroute == CommandState.LoadEnroute ? transferCommand.LoadPortId : transferCommand.UnloadPortId;
+            if (!string.IsNullOrEmpty(portId))
+            {
+                if (Vehicle.Mapinfo.portMap.ContainsKey(portId))
                 {
-                    existEnroute++;
+                    if (string.IsNullOrEmpty(Vehicle.Mapinfo.portMap[portId].AgvStationId))
+                    {
+                        return true;
+                    }
                 }
             }
-            if (existEnroute > 1)
-            {
-                throw new Exception($"Vehicle has no enough slot to transfer. ExistEnroute[{existEnroute}]");
-            }
+
+            return false;
         }
 
         private bool IsMoveTransferCommand(EnumAgvcTransCommandType agvcTransCommandType)
@@ -3378,7 +3410,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                     case EnumAseCarrierSlotStatus.PositionError:
                         {
                             SetAlarmFromAgvm(51);
-                            // AsePackage_OnModeChangeEvent(this, EnumAutoState.Manual);
                         }
                         return;
                     case EnumAseCarrierSlotStatus.ReadFail:
@@ -3421,7 +3452,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                     case EnumAseCarrierSlotStatus.PositionError:
                         {
                             SetAlarmFromAgvm(51);
-                            // AsePackage_OnModeChangeEvent(this, EnumAutoState.Manual);
                         }
                         return;
                     case EnumAseCarrierSlotStatus.ReadFail:
