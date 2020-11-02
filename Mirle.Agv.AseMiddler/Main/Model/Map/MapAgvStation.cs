@@ -9,6 +9,6 @@ namespace Mirle.Agv.AseMiddler.Model
     public class MapAgvStation
     {
         public string ID { get; set; } = "";
-        public List<string> AddressIds { get; set; } = new List<string>();
+        public List<MapPort> Ports { get; set; } = new List<MapPort>();
     }
 }
