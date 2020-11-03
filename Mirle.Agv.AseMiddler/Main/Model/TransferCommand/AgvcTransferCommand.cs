@@ -37,6 +37,9 @@ namespace Mirle.Agv.AseMiddler.Model
         public bool IsUnloadArrivalReply { get; set; } = false;
         public bool IsUnloadCompleteReply { get; set; } = false;
         public bool IsVitualPortUnloadArrivalReply { get; set; } = false;
+        public bool IsE84ContinueLoadAndUnlaod { get; set; } = false;
+        public string E84ContinueCommandId { get; set; } = "";
+
 
         public AgvcTransferCommand()
         {

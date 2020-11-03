@@ -16,6 +16,8 @@ namespace Mirle.Agv.AseMiddler.Model.TransferSteps
         public string GateType { get; set; } = "0";
         public string PortNumber { get; set; } = "1";
 
+        public bool IsBindUnload { get; set; } = false;
+
         public RobotCommand(AgvcTransferCommand transferCommand) : base(transferCommand.CommandId)
         {
             this.CassetteId = transferCommand.CassetteId;

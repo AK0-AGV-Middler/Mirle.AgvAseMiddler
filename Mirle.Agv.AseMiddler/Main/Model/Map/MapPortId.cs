@@ -13,5 +13,10 @@ namespace Mirle.Agv.AseMiddler.Model
         public string Number { get; set; } = "1";
         public bool IsVitualPort { get; set; } = false;
         public string AgvStationId { get; set; } = "";
+
+        public bool IsAgvStationPort()
+        {
+            return !string.IsNullOrEmpty(AgvStationId);
+        }
     }
 }

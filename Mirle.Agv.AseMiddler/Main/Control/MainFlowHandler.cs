@@ -478,7 +478,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
                 }
 
-                Thread.Sleep(Vehicle.MainFlowConfig.VisitTransferStepsSleepTimeMs);
+                SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.VisitTransferStepsSleepTimeMs);
             }
         }
 
@@ -587,12 +587,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                             case CommandState.LoadEnroute:
                                 if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Left)
                                 {
+                                    CheckLoadEnrouteBindSamePortUnload();
                                     LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[二次定位.左開蓋] Move end. Open slot left.");
 
                                     Vehicle.TransferCommand.SlotNumber = EnumSlotNumber.L;
                                 }
                                 else if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Right)
                                 {
+                                    CheckLoadEnrouteBindSamePortUnload();
                                     LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[二次定位.右開蓋] Move end. Open slot right.");
 
                                     Vehicle.TransferCommand.SlotNumber = EnumSlotNumber.R;
@@ -628,12 +630,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 {
                                     if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Left)
                                     {
+                                        CheckLoadEnrouteBindSamePortUnload();
                                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[二次定位.左開蓋] Move end. Open slot left.");
                                         Vehicle.TransferCommand.SlotNumber = EnumSlotNumber.L;
                                         asePackage.PartMove(EnumAseMoveCommandIsEnd.End, EnumSlotSelect.Left);
                                     }
                                     else if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Right)
                                     {
+                                        CheckLoadEnrouteBindSamePortUnload();
                                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[二次定位.右開蓋] Move end. Open slot right.");
                                         Vehicle.TransferCommand.SlotNumber = EnumSlotNumber.R;
                                         asePackage.PartMove(EnumAseMoveCommandIsEnd.End, EnumSlotSelect.Right);
@@ -661,14 +665,81 @@ namespace Mirle.Agv.AseMiddler.Controller
                 }
                 else
                 {
-                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitMoveArrivalVitualPortReply;
-                    Vehicle.TransferCommand.IsVitualPortUnloadArrivalReply = false;
-                    agvcConnector.ReportUnloadArrival();
+                    if (!CheckUnloadEnrouteBindSamePortLoad())
+                    {
+                        Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitMoveArrivalVitualPortReply;
+                        Vehicle.TransferCommand.IsVitualPortUnloadArrivalReply = false;
+                        agvcConnector.ReportUnloadArrival();
+                    }
                 }
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
+        private bool CheckUnloadEnrouteBindSamePortLoad()
+        {
+            var unloadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId];
+            var agvStation = Vehicle.Mapinfo.agvStationMap[unloadPort.AgvStationId];
+            foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
+            {
+                if (transferCommand.EnrouteState == CommandState.LoadEnroute)
+                {
+                    if (agvStation.IsInThisAgvStationForPortId(transferCommand.LoadPortId))
+                    {
+                        if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Left)
+                        {
+                            Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                            transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+                            Vehicle.TransferCommand = transferCommand;
+
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定.左開蓋] Check unload enroute bind same port load. Open slot left.");
+                            return true;
+                        }
+                        else if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Right)
+                        {
+                            Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                            transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+                            Vehicle.TransferCommand = transferCommand;
+
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定.右開蓋] Check unload enroute bind same port load. Open slot right.");
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void CheckLoadEnrouteBindSamePortUnload()
+        {
+            if (string.IsNullOrEmpty(Vehicle.TransferCommand.LoadPortId)) return;
+
+            var loadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.LoadPortId];
+            if (loadPort.IsAgvStationPort())
+            {
+                var agvStation = Vehicle.Mapinfo.agvStationMap[loadPort.AgvStationId];
+                foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
+                {
+                    if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
+                    {
+                        var unloadPort = Vehicle.Mapinfo.portMap[transferCommand.UnloadPortId];
+                        if (unloadPort.IsVitualPort)
+                        {
+                            if (agvStation.IsInThisAgvStationForPortId(unloadPort.ID))
+                            {
+                                transferCommand.UnloadPortId = Vehicle.TransferCommand.LoadPortId;
+                                Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod = true;
+                                Vehicle.TransferCommand.E84ContinueCommandId = transferCommand.CommandId;
+                                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] Load enroute bind same port unload.[{transferCommand.CommandId}]");
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -688,16 +759,14 @@ namespace Mirle.Agv.AseMiddler.Controller
             if (!string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
             {
                 var agvStationId = Vehicle.AseMoveStatus.LastAddress.AgvStationId;
+                var agvStation = Vehicle.Mapinfo.agvStationMap[agvStationId];
                 if (Vehicle.Mapinfo.agvStationMap.ContainsKey(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
                 {
-                    var portIds = (from port in Vehicle.Mapinfo.agvStationMap[agvStationId].Ports
-                                   select port.ID).ToList();
-
                     foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
                     {
                         if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
                         {
-                            if (portIds.Contains(transferCommand.UnloadPortId.Trim()))
+                            if (agvStation.IsInThisAgvStationForPortId(transferCommand.UnloadPortId))
                             {
                                 transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
                                 Vehicle.TransferCommand = transferCommand;
@@ -784,16 +853,15 @@ namespace Mirle.Agv.AseMiddler.Controller
             if (!string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
             {
                 var agvStationId = Vehicle.AseMoveStatus.LastAddress.AgvStationId;
+                var agvStation = Vehicle.Mapinfo.agvStationMap[agvStationId];
                 if (Vehicle.Mapinfo.agvStationMap.ContainsKey(agvStationId))
                 {
-                    var portIds = (from port in Vehicle.Mapinfo.agvStationMap[agvStationId].Ports
-                                   select port.ID).ToList();
                     foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
                     {
                         if (transferCommand.EnrouteState == CommandState.LoadEnroute)
                         {
-                            if (portIds.Contains(transferCommand.LoadPortId.Trim()))
-                            {                                
+                            if (agvStation.IsInThisAgvStationForPortId(transferCommand.LoadPortId))
+                            {
                                 transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
                                 Vehicle.TransferCommand = transferCommand;
 
@@ -1178,6 +1246,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 }
                 else
                 {
+                    loadCmd.IsBindUnload = Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod;
                     Task.Run(() => asePackage.DoRobotCommand(loadCmd));
                 }
             }
@@ -1226,7 +1295,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void SimulationLoad()
         {
-            Thread.Sleep(2000);
+            SpinWait.SpinUntil(() => false, 2000);
 
             switch (Vehicle.TransferCommand.SlotNumber)
             {
@@ -1242,9 +1311,25 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             agvcConnector.StatusChangeReport();
 
-            Thread.Sleep(2000);
+            SpinWait.SpinUntil(() => false, 2000);
 
             AsePackage_OnRobotEndEvent(this, EnumRobotEndType.Finished);
+
+            var slotNum = Vehicle.TransferCommand.SlotNumber == EnumSlotNumber.L ? EnumSlotNumber.R : EnumSlotNumber.L;
+
+            //if (Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod)
+            //{
+            //    var nextTransferCommand = Vehicle.mapTransferCommands[Vehicle.TransferCommand.E84ContinueCommandId.Trim()];
+            //    nextTransferCommand.IsRobotEnd = false;
+
+            //    Task.Run(() =>
+            //    {
+            //        SpinWait.SpinUntil(() => false, 2000);
+
+            //        SimulationUnload();
+
+            //    });
+            //}
         }
 
         private void LoadComplete()
@@ -1476,6 +1561,27 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨完成.命令選擇] Load End Optimize");
 
+                if (Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod)
+                {
+                    var bindCommandId = Vehicle.TransferCommand.E84ContinueCommandId.Trim();
+                    if (!string.IsNullOrEmpty(bindCommandId))
+                    {
+                        if (Vehicle.mapTransferCommands.ContainsKey(bindCommandId))
+                        {
+                            var transferCommand = Vehicle.mapTransferCommands[bindCommandId];
+                            Vehicle.TransferCommand = transferCommand;
+                            UnloadCmdInfo unloadCmd = PreUnloadCheck();
+
+                            if (Vehicle.MainFlowConfig.IsSimulation)
+                            {
+                                SimulationUnload();
+                            }
+                        
+                            return;
+                        }
+                    }
+                }
+
                 var transferCommands = Vehicle.mapTransferCommands.Values.ToArray();
 
                 foreach (var transferCommand in transferCommands)
@@ -1613,50 +1719,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                if (Vehicle.TransferCommand.IsStopAndClear) return;
-
-                Vehicle.TransferCommand.IsRobotEnd = false;
-                Vehicle.TransferCommand.TransferStep = EnumTransferStep.UnloadWaitEnd;
-
-                switch (Vehicle.TransferCommand.SlotNumber)
-                {
-                    case EnumSlotNumber.L:
-                        if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty)
-                        {
-                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放貨前.檢查.失敗] Pre Unload Check Fail. Slot is Empty.");
-
-                            SetAlarmFromAgvm(000017);
-                            return;
-                        }
-                        break;
-                    case EnumSlotNumber.R:
-                        if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty)
-                        {
-                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放貨前.檢查.失敗] Pre Unload Check Fail. Slot is Empty.");
-
-                            SetAlarmFromAgvm(000017);
-                            return;
-                        }
-                        break;
-                }
-
-                UnloadCmdInfo unloadCmd = GetUnloadCommand();
-                if (Vehicle.AseMoveStatus.LastAddress.Id != Vehicle.TransferCommand.UnloadAddressId)
-                {
-                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-                    return;
-                }
-
-                if (unloadCmd.PortNumber == "9")
-                {
-                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-                    return;
-                }
-
-                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}][PortId = {Vehicle.TransferCommand.UnloadPortId}]");
-                agvcConnector.Unloading();
-
-                CheckTimerStopChargeInRobotStep();
+                UnloadCmdInfo unloadCmd = PreUnloadCheck();
 
                 if (Vehicle.MainFlowConfig.IsSimulation)
                 {
@@ -1671,6 +1734,55 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
+        }
+
+        private UnloadCmdInfo PreUnloadCheck()
+        {
+            if (Vehicle.TransferCommand.IsStopAndClear) throw new Exception("Stop and Clear.");
+
+            Vehicle.TransferCommand.IsRobotEnd = false;
+            Vehicle.TransferCommand.TransferStep = EnumTransferStep.UnloadWaitEnd;
+
+            switch (Vehicle.TransferCommand.SlotNumber)
+            {
+                case EnumSlotNumber.L:
+                    if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty)
+                    {
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放貨前.檢查.失敗] Pre Unload Check Fail. Slot is Empty.");
+
+                        SetAlarmFromAgvm(000017);
+                        throw new Exception("Pre Unload Check Fail SlotL.");
+                    }
+                    break;
+                case EnumSlotNumber.R:
+                    if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty)
+                    {
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放貨前.檢查.失敗] Pre Unload Check Fail. Slot is Empty.");
+
+                        SetAlarmFromAgvm(000017);
+                        throw new Exception("Pre Unload Check Fail SlotL.");
+                    }
+                    break;
+            }
+
+            UnloadCmdInfo unloadCmd = GetUnloadCommand();
+            if (Vehicle.AseMoveStatus.LastAddress.Id != Vehicle.TransferCommand.UnloadAddressId)
+            {
+                Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                throw new Exception("Move to unload.");
+            }
+
+            if (unloadCmd.PortNumber == "9")
+            {
+                Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                throw new Exception("Find real unload port.");
+            }
+
+            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}][PortId = {Vehicle.TransferCommand.UnloadPortId}]");
+            agvcConnector.Unloading();
+
+            CheckTimerStopChargeInRobotStep();
+            return unloadCmd;
         }
 
         private void CheckTimerStopChargeInRobotStep()
@@ -1755,7 +1867,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void SimulationUnload()
         {
-            Thread.Sleep(2000);
+            SpinWait.SpinUntil(() => false, 2000);
 
             switch (Vehicle.TransferCommand.SlotNumber)
             {
@@ -1771,7 +1883,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             agvcConnector.StatusChangeReport();
 
-            Thread.Sleep(2000);
+            SpinWait.SpinUntil(() => false, 2000);
 
             AsePackage_OnRobotEndEvent(this, EnumRobotEndType.Finished);
         }
@@ -2305,7 +2417,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 if (Vehicle.Mapinfo.portMap.ContainsKey(portId))
                 {
-                    if (string.IsNullOrEmpty(Vehicle.Mapinfo.portMap[portId].AgvStationId))
+                    if (Vehicle.Mapinfo.portMap[portId].IsAgvStationPort())
                     {
                         return true;
                     }

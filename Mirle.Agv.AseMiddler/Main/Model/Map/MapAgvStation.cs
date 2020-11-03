@@ -10,5 +10,10 @@ namespace Mirle.Agv.AseMiddler.Model
     {
         public string ID { get; set; } = "";
         public List<MapPort> Ports { get; set; } = new List<MapPort>();
+
+        public bool IsInThisAgvStationForPortId(string portId)
+        {
+            return Ports.Any(x => x.ID.Trim() == portId.Trim());
+        }
     }
 }

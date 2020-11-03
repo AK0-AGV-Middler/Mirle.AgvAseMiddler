@@ -597,7 +597,18 @@ namespace Mirle.Agv.AseMiddler.Controller
                 string gateType = RobotCommand.GateType.Substring(0, 1);
                 string portNumber = RobotCommand.PortNumber.Substring(0, 1);
 
-                return string.Concat(pioDirection, fromPort, toPort, gateType, portNumber).PadRight(24, '0');
+                if (RobotCommand.IsBindUnload)
+                {
+                    string fromPort2 = RobotCommand.SlotNumber == EnumSlotNumber.L ? "0000R" : "0000L";
+                    string toPort2 = fromPort;
+
+                    return string.Concat(pioDirection, fromPort, toPort, gateType, portNumber, fromPort2, toPort2, portNumber).PadRight(24, '0');
+                }
+                else
+                {
+                    return string.Concat(pioDirection, fromPort, toPort, gateType, portNumber).PadRight(24, '0');
+                }
+
             }
             catch (Exception ex)
             {
@@ -828,7 +839,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
                 ImportantPspLog?.Invoke(this, ex.Message);
-                OnRobotEndEvent?.Invoke(this,  EnumRobotEndType.RobotError);
+                OnRobotEndEvent?.Invoke(this, EnumRobotEndType.RobotError);
             }
         }
 
