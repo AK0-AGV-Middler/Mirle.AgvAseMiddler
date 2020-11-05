@@ -2515,11 +2515,9 @@ namespace Mirle.Agv.AseMiddler.Controller
                 catch (Exception ex)
                 {
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                    Thread.Sleep(1);
                 }
-
-                Thread.Sleep(Vehicle.MainFlowConfig.WatchLowPowerSleepTimeMs);
-                //SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.WatchLowPowerSleepTimeMs);
+               
+                SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.WatchLowPowerSleepTimeMs);
             }
         }
 
@@ -2553,9 +2551,10 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void StartCharge(MapAddress endAddress, int chargeTimeSec = -1)
         {
+            IsArrivalCharge = true;
+
             try
             {
-                IsArrivalCharge = true;
                 var address = endAddress;
                 var percentage = Vehicle.AseBatteryStatus.Percentage;
                 var highPercentage = Vehicle.MainFlowConfig.HighPowerPercentage;
@@ -2617,14 +2616,13 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                     Vehicle.CheckStartChargeReplyEnd = true;
                 }
-
-                IsArrivalCharge = false;
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                IsArrivalCharge = false;
             }
+
+            IsArrivalCharge = false;
         }
 
         private void LowPowerStartCharge(MapAddress lastAddress)
@@ -2660,9 +2658,9 @@ namespace Mirle.Agv.AseMiddler.Controller
                         LowPowerRepeatedlyChargeCounter++;
                         if (LowPowerRepeatedlyChargeCounter > Vehicle.MainFlowConfig.LowPowerRepeatedlyChargeCounterMax)
                         {
+                            IsLowPowerStartChargeTimeout = true;
                             Task.Run(() =>
-                            {
-                                IsLowPowerStartChargeTimeout = true;
+                            {                               
                                 SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.SleepLowPowerWatcherSec * 1000);
                                 IsLowPowerStartChargeTimeout = false;
                             });
@@ -2813,34 +2811,9 @@ namespace Mirle.Agv.AseMiddler.Controller
             try
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[到站.充電] : ArrivalStartCharge.");
-                //int chargeTimeSec = -1;
-                //if (IsMoveEndRobotStep())
-                //{
-                //    int sameAddressRobotCommand = 0;
-                //    foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
-                //    {
-                //        if (transferCommand.EnrouteState == CommandState.LoadEnroute)
-                //        {
-                //            if (transferCommand.LoadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
-                //            {
-                //                sameAddressRobotCommand++;
-                //            }
-                //        }
-                //        else if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
-                //        {
-                //            if (transferCommand.UnloadAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
-                //            {
-                //                sameAddressRobotCommand++;
-                //            }
-                //        }
-                //    }
-                //    chargeTimeSec = Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec * sameAddressRobotCommand;
-                //    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[手臂命令.提早斷充] : ChargeIntervalInRobotingSec [RobotStepCount ={sameAddressRobotCommand}][ChargeTimeSec = {chargeTimeSec}].");
-                //}
 
                 Task.Run(() =>
                 {
-                    //StartCharge(endAddress, chargeTimeSec);
                     StartCharge(endAddress);
                 });
             }
