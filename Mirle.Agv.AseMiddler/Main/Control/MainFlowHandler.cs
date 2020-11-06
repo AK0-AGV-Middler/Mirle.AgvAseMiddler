@@ -1576,7 +1576,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             {
                                 SimulationUnload();
                             }
-                        
+
                             return;
                         }
                     }
@@ -1598,7 +1598,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 if (Vehicle.mapTransferCommands.Count > 1)
                 {
-                    bool isEqLoad = string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[Vehicle.TransferCommand.LoadAddressId].AgvStationId);
+                    bool isEqLoad = IsEqFromAddressId(Vehicle.TransferCommand.LoadAddressId);
 
                     var minDis = DistanceFromLastPosition(Vehicle.TransferCommand.UnloadAddressId);
 
@@ -1611,6 +1611,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                         {
                             transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
                             targetAddressId = transferCommand.LoadAddressId;
+                            if (SlotIsFull() && IsEqFromAddressId(targetAddressId))
+                            {
+                                continue;
+                            }
                         }
                         else
                         {
@@ -1618,7 +1622,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             targetAddressId = transferCommand.UnloadAddressId;
                         }
 
-                        bool isTransferCommandToEq = string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[targetAddressId].AgvStationId);
+                        bool isTransferCommandToEq = IsEqFromAddressId(targetAddressId); 
 
                         if (isTransferCommandToEq == isEqLoad)
                         {
@@ -1661,8 +1665,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
                                 targetAddressId = transferCommand.UnloadAddressId;
                             }
-
-                            bool isTransferCommandToEq = string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[targetAddressId].AgvStationId);
 
                             if (targetAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                             {
@@ -2093,7 +2095,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇] TransferCompleteOptimize");
 
-                bool isEqEnd = string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId);
+                bool isEqEnd = IsEqFromAddressId(Vehicle.AseMoveStatus.LastAddress.Id);
 
                 if (!Vehicle.mapTransferCommands.IsEmpty)
                 {
@@ -2106,9 +2108,8 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                     if (Vehicle.mapTransferCommands.Count > 1)
                     {
-                        var minDis = 999999;
-
                         var transferCommands = Vehicle.mapTransferCommands.Values.ToArray();
+
                         foreach (var transferCommand in transferCommands)
                         {
                             if (transferCommand.IsStopAndClear)
@@ -2121,6 +2122,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             }
                         }
 
+                        var minDis = 999999;
                         bool foundNextCommand = false;
                         foreach (var transferCommand in transferCommands)
                         {
@@ -2136,7 +2138,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
                                 targetAddressId = transferCommand.UnloadAddressId;
                             }
-                            bool isTransferCommandToEq = string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[targetAddressId].AgvStationId); ;
+                            bool isTransferCommandToEq = IsEqFromAddressId(targetAddressId);
 
                             if (isTransferCommandToEq == isEqEnd)
                             {
@@ -2177,7 +2179,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                                     transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
                                     targetAddressId = transferCommand.UnloadAddressId;
                                 }
-                                bool isTransferCommandToEq = string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[targetAddressId].AgvStationId);
 
                                 if (targetAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
                                 {
@@ -2210,6 +2211,39 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
+        }
+
+        private bool IsEqFromPortId(string portId)
+        {
+            try
+            {
+                return !Vehicle.Mapinfo.portMap[portId].IsAgvStationPort();
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+
+                return true;
+            }
+        }
+
+        private bool IsEqFromAddressId(string addressId)
+        {
+            try
+            {
+                return string.IsNullOrEmpty(Vehicle.Mapinfo.addressMap[addressId].AgvStationId);
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+
+                return true;
+            }
+        }
+
+        private bool SlotIsFull()
+        {
+            return Vehicle.GetAseCarrierSlotStatus(EnumSlotNumber.L).CarrierSlotStatus != EnumAseCarrierSlotStatus.Empty && Vehicle.GetAseCarrierSlotStatus(EnumSlotNumber.R).CarrierSlotStatus != EnumAseCarrierSlotStatus.Empty;
         }
 
         public void StopClearAndReset()
@@ -2516,7 +2550,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
                 }
-               
+
                 SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.WatchLowPowerSleepTimeMs);
             }
         }
@@ -2660,7 +2694,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         {
                             IsLowPowerStartChargeTimeout = true;
                             Task.Run(() =>
-                            {                               
+                            {
                                 SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.SleepLowPowerWatcherSec * 1000);
                                 IsLowPowerStartChargeTimeout = false;
                             });
