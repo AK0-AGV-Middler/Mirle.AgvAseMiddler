@@ -140,10 +140,9 @@ namespace Mirle.Agv.AseMiddler.Controller
                 catch (Exception ex)
                 {
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                    Thread.Sleep(1);
                 }
 
-                Thread.Sleep(Vehicle.AsePackageConfig.WatchWifiSignalIntervalMs);
+                SpinWait.SpinUntil(()=>false,Vehicle.AsePackageConfig.WatchWifiSignalIntervalMs);
             }
         }
 
@@ -241,17 +240,15 @@ namespace Mirle.Agv.AseMiddler.Controller
                             DealSecondaryReceived(psTransaction);
                         }
 
-                        Thread.Sleep(10);
+                        SpinWait.SpinUntil(()=>false,10);
                     }
                 }
                 catch (Exception ex)
                 {
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                    Thread.Sleep(1);
                 }
 
-                Thread.Sleep(Vehicle.AsePackageConfig.ScheduleIntervalMs);
-                //SpinWait.SpinUntil(() => false, Vehicle.AsePackageConfig.ScheduleIntervalMs);
+                SpinWait.SpinUntil(()=>false,Vehicle.AsePackageConfig.ScheduleIntervalMs);
 
             }
         }
@@ -276,19 +273,16 @@ namespace Mirle.Agv.AseMiddler.Controller
                         }
                         else
                         {
-                            Thread.Sleep(500);
-                            //SpinWait.SpinUntil(() => false, 500);
+                            SpinWait.SpinUntil(()=>false,500);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                    Thread.Sleep(1);
                 }
 
-                Thread.Sleep(Vehicle.AseMoveConfig.WatchPositionInterval);
-                //SpinWait.SpinUntil(() => false, Vehicle.AseMoveConfig.WatchPositionInterval);
+                SpinWait.SpinUntil(()=>false,Vehicle.AseMoveConfig.WatchPositionInterval);
             }
         }
 
@@ -318,18 +312,15 @@ namespace Mirle.Agv.AseMiddler.Controller
                 catch (Exception ex)
                 {
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                    Thread.Sleep(1);
                 }
 
                 if (Vehicle.IsCharging)
                 {
-                    Thread.Sleep(Vehicle.AseBatteryConfig.WatchBatteryStateIntervalInCharging);
-                    //SpinUntil(() => false, Vehicle.AseBatteryConfig.WatchBatteryStateIntervalInCharging);
+                    SpinWait.SpinUntil(()=>false,Vehicle.AseBatteryConfig.WatchBatteryStateIntervalInCharging);
                 }
                 else
                 {
-                    Thread.Sleep(Vehicle.AseBatteryConfig.WatchBatteryStateInterval);
-                    //SpinWait.SpinUntil(() => false, Vehicle.AseBatteryConfig.WatchBatteryStateInterval);
+                    SpinWait.SpinUntil(()=>false,Vehicle.AseBatteryConfig.WatchBatteryStateInterval);
                 }
             }
         }

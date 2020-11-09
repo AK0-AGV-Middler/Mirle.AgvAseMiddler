@@ -355,11 +355,9 @@ namespace Mirle.Agv.AseMiddler.Controller
                 catch (Exception ex)
                 {
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                    Thread.Sleep(1);
                 }
 
-                Thread.Sleep(Vehicle.AgvcConnectorConfig.ScheduleIntervalMs);
-                //SpinWait.SpinUntil(() => false, Vehicle.AgvcConnectorConfig.ScheduleIntervalMs);
+                SpinWait.SpinUntil(()=>false,Vehicle.AgvcConnectorConfig.ScheduleIntervalMs);
             }
         }
         private void PrimarySend(ref ScheduleWrapper scheduleWrapper)
@@ -499,7 +497,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                     catch (Exception ex)//200828 dabid for Watch Not AskAllSectionsReserveInOnce
                     {
                         LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                        Thread.Sleep(1);
                     }
 
                     try
@@ -520,12 +517,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                     {
                         LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
                         Vehicle.TMP_e = ex.Message;
-                        Thread.Sleep(1);
                     }
                 }
 
-                Thread.Sleep(Vehicle.AgvcConnectorConfig.ScheduleIntervalMs);
-                //SpinWait.SpinUntil(() => false, Vehicle.AgvcConnectorConfig.ScheduleIntervalMs);
+                SpinWait.SpinUntil(()=>false,Vehicle.AgvcConnectorConfig.ScheduleIntervalMs);
             }
         }
 
@@ -700,7 +695,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     Task.Run(() =>
                     {
-                        Thread.Sleep(Vehicle.AgvcConnectorConfig.AskReserveIntervalMs);
+                        SpinWait.SpinUntil(()=>false,Vehicle.AgvcConnectorConfig.AskReserveIntervalMs);
                         IsSleepByAskReserveFail = false;
                     });
                 }
@@ -1426,7 +1421,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 Send_Cmd136_CstIdReadReport(EnumSlotNumber.L); //200625 dabid+
             }
-            Thread.Sleep(50);
+            SpinWait.SpinUntil(()=>false,50);
             if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty)
             {
                 Send_Cmd136_CstRemove(EnumSlotNumber.R);

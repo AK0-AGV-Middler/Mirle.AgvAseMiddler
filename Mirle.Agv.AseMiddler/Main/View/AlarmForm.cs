@@ -21,7 +21,7 @@ namespace Mirle.Agv.AseMiddler.View
         {
             btnAlarmReset.Enabled = false;
             mainFlowHandler.ResetAllAlarmsFromAgvm();
-            Thread.Sleep(500);
+            SpinWait.SpinUntil(()=>false,500);
             btnAlarmReset.Enabled = true;
         }
 

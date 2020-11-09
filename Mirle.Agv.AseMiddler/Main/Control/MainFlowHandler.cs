@@ -331,12 +331,12 @@ namespace Mirle.Agv.AseMiddler.Controller
                     if (Vehicle.TransferCommand.IsStopAndClear)
                     {
                         ClearTransferTransferCommand();
-                        Thread.Sleep(Vehicle.MainFlowConfig.VisitTransferStepsSleepTimeMs);
+                        SpinWait.SpinUntil(()=> Vehicle.TransferCommand.IsStopAndClear, Vehicle.MainFlowConfig.VisitTransferStepsSleepTimeMs);
                         continue;
                     }
                     else if (IsVisitTransferStepPause)
                     {
-                        Thread.Sleep(Vehicle.MainFlowConfig.VisitTransferStepsSleepTimeMs);
+                        SpinWait.SpinUntil(()=> !IsVisitTransferStepPause, Vehicle.MainFlowConfig.VisitTransferStepsSleepTimeMs);
                         continue;
                     }
 
@@ -532,7 +532,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     else
                     {
                         SetAlarmFromAgvm(58);
-                        Thread.Sleep(3000);
+                        SpinWait.SpinUntil(()=>false,3000);
                         if (endReference == EnumMoveToEndReference.Avoid)
                         {
                             Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToAvoid;
@@ -2268,7 +2268,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[停止.重置] Stop.Clear.Reset.");
 
-                Thread.Sleep(500);
+                SpinWait.SpinUntil(()=>false,500);
                 agvcConnector.ClearAllReserve();
 
                 if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Loading || Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Loading)
@@ -2786,7 +2786,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     }
 
                     //in starting charge
-                    if (!Vehicle.CheckStartChargeReplyEnd) Thread.Sleep(Vehicle.MainFlowConfig.StopChargeWaitingTimeoutMs);
+                    SpinWait.SpinUntil(()=> Vehicle.CheckStartChargeReplyEnd, Vehicle.MainFlowConfig.StopChargeWaitingTimeoutMs);
 
                     int retryCount = Vehicle.MainFlowConfig.DischargeRetryTimes;
                     Vehicle.IsCharging = true;
@@ -2918,11 +2918,9 @@ namespace Mirle.Agv.AseMiddler.Controller
                 catch (Exception ex)
                 {
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                    Thread.Sleep(1);
                 }
 
-                Thread.Sleep(Vehicle.MainFlowConfig.TrackPositionSleepTimeMs);
-                //SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.TrackPositionSleepTimeMs);
+                SpinWait.SpinUntil(()=>false,Vehicle.MainFlowConfig.TrackPositionSleepTimeMs);
             }
         }
 
@@ -3437,7 +3435,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         {
                             case EnumAutoState.Auto:
                                 asePackage.SetVehicleAutoScenario();
-                                Thread.Sleep(3000);  //500-->3000
+                                SpinWait.SpinUntil(()=>false,3000);  //500-->3000
                                 CheckCanAuto();
                                 UpdateSlotStatus();
                                 Vehicle.AseMoveStatus.IsMoveEnd = false;

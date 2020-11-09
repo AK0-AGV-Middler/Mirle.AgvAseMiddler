@@ -438,7 +438,7 @@ namespace Mirle.Agv.AseMiddler.View
         var btn = sender as Button;
         btn.Enabled = false;
         asePackage.AllAgvlStatusReportRequest();
-        System.Threading.Thread.Sleep(50);
+        System.Threading.SpinWait.SpinUntil(()=>false,50);
         btn.Enabled = true;
       }
       catch (Exception ex)

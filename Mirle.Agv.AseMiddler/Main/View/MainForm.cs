@@ -502,7 +502,7 @@ namespace Mirle.Agv.AseMiddler.View
                 var btn = sender as Button;
                 btn.Enabled = false;
                 asePackage.AllAgvlStatusReportRequest();
-                System.Threading.Thread.Sleep(50);
+                SpinWait.SpinUntil(()=>false,50);
                 btn.Enabled = true;
             }
             catch (Exception ex)
@@ -1175,7 +1175,7 @@ namespace Mirle.Agv.AseMiddler.View
         {
             btnAlarmReset.Enabled = false;
             mainFlowHandler.ResetAllAlarmsFromAgvm();
-            Thread.Sleep(500);
+            SpinWait.SpinUntil(()=>false,500);
             btnAlarmReset.Enabled = true;
         }
 
@@ -1183,7 +1183,7 @@ namespace Mirle.Agv.AseMiddler.View
         {
             btnAutoManual.Enabled = false;
             SwitchAutoStatus();
-            Thread.Sleep(500);
+            SpinWait.SpinUntil(()=>false,500);
             btnAutoManual.Enabled = true;
         }
 
