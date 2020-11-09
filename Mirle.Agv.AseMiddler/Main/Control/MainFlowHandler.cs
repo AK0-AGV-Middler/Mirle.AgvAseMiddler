@@ -716,30 +716,38 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void CheckLoadEnrouteBindSamePortUnload()
         {
-            if (string.IsNullOrEmpty(Vehicle.TransferCommand.LoadPortId)) return;
-
-            var loadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.LoadPortId];
-            if (loadPort.IsAgvStationPort())
+            try
             {
-                var agvStation = Vehicle.Mapinfo.agvStationMap[loadPort.AgvStationId];
-                foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
+                if (Vehicle.MainFlowConfig.IsE84Continue)
                 {
-                    if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
+                    var loadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.LoadPortId];
+                    if (loadPort.IsAgvStationPort())
                     {
-                        var unloadPort = Vehicle.Mapinfo.portMap[transferCommand.UnloadPortId];
-                        if (unloadPort.IsVitualPort)
+                        var agvStation = Vehicle.Mapinfo.agvStationMap[loadPort.AgvStationId];
+                        foreach (var transferCommand in Vehicle.mapTransferCommands.Values.ToArray())
                         {
-                            if (agvStation.IsInThisAgvStationForPortId(unloadPort.ID))
+                            if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
                             {
-                                transferCommand.UnloadPortId = Vehicle.TransferCommand.LoadPortId;
-                                Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod = true;
-                                Vehicle.TransferCommand.E84ContinueCommandId = transferCommand.CommandId;
-                                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] Load enroute bind same port unload.[{transferCommand.CommandId}]");
-                                break;
+                                var unloadPort = Vehicle.Mapinfo.portMap[transferCommand.UnloadPortId];
+                                if (unloadPort.IsVitualPort)
+                                {
+                                    if (agvStation.IsInThisAgvStationForPortId(unloadPort.ID))
+                                    {
+                                        transferCommand.UnloadPortId = Vehicle.TransferCommand.LoadPortId;
+                                        Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod = true;
+                                        Vehicle.TransferCommand.E84ContinueCommandId = transferCommand.CommandId;
+                                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] Load enroute bind same port unload.[{transferCommand.CommandId}]");
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
 
@@ -784,13 +792,19 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private bool IsFirstOrderDealVitualPort()
         {
-            if (Vehicle.TransferCommand.EnrouteState == CommandState.UnloadEnroute)
+            try
             {
-                if (string.IsNullOrEmpty(Vehicle.TransferCommand.UnloadPortId)) return false;
-                if (!Vehicle.Mapinfo.portMap.ContainsKey(Vehicle.TransferCommand.UnloadPortId)) return false;
-                return Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId].IsVitualPort;
+                if (Vehicle.TransferCommand.EnrouteState == CommandState.UnloadEnroute)
+                {                    
+                    return Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId].IsVitualPort;
+                }
+                return false;
             }
-            return false;
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+                return false;
+            }
         }
 
         private void DealVitualPortUnloadArrivalReply()
