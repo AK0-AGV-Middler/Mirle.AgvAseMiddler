@@ -490,6 +490,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令.移動.準備] MoveToAddress.[{endAddressId}].[{endReference}]");
 
+                LastIdlePosition.TimeStamp = DateTime.Now;
                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToAddressWaitArrival;
                 Vehicle.AseMovingGuide = new AseMovingGuide();
                 Vehicle.AseMovingGuide.ToAddressId = endAddressId;
@@ -572,6 +573,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 if (!IsFirstOrderDealVitualPort())
                 {
+                    LastIdlePosition.TimeStamp = DateTime.Now;
                     Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToAddressWaitEnd;
 
                     if (Vehicle.MainFlowConfig.IsSimulation)
@@ -996,6 +998,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         if (Vehicle.AseMoveStatus.LastAddress.Id == Vehicle.TransferCommand.UnloadAddressId)
                         {
                             agvcConnector.MoveArrival();
+                            LastIdlePosition.TimeStamp = DateTime.Now;
                             Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToAddressWaitArrival;
                             Vehicle.AseMovingGuide.ToAddressId = Vehicle.TransferCommand.UnloadAddressId;
                         }
@@ -1007,6 +1010,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     case CommandState.LoadEnroute:
                         if (Vehicle.AseMoveStatus.LastAddress.Id == Vehicle.TransferCommand.LoadAddressId)
                         {
+                            LastIdlePosition.TimeStamp = DateTime.Now;
                             Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToAddressWaitArrival;
                             Vehicle.AseMovingGuide.ToAddressId = Vehicle.TransferCommand.LoadAddressId;
                         }
@@ -1018,6 +1022,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     case CommandState.UnloadEnroute:
                         if (Vehicle.AseMoveStatus.LastAddress.Id == Vehicle.TransferCommand.UnloadAddressId)
                         {
+                            LastIdlePosition.TimeStamp = DateTime.Now;
                             Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToAddressWaitArrival;
                             Vehicle.AseMovingGuide.ToAddressId = Vehicle.TransferCommand.UnloadAddressId;
                         }
@@ -3067,7 +3072,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void CheckPositionUnchangeTimeout(AsePositionArgs positionArgs)
         {
-            if (!Vehicle.AseMoveStatus.IsMoveEnd)
+            if (IsMoveStep())
             {
                 if (LastIdlePosition.Position.MyDistance(positionArgs.MapPosition) <= Vehicle.MainFlowConfig.IdleReportRangeMm)
                 {
