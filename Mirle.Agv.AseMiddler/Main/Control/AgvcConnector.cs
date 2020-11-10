@@ -598,7 +598,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             ClearNeedReserveSections();
             ClearGotReserveOkSections();
-            mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[清除 所有路權]  ClearAllReserve.");
+            mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[清除.所有路權]  ClearAllReserve.");
         }
         public void AskGuideAddressesAndSections(string endAddressId)
         {

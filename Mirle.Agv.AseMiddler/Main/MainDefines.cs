@@ -262,7 +262,8 @@ namespace Mirle.Agv.AseMiddler
         MoveFail,
         WaitOverrideToContinue,
         RobotFail,
-        Abort
+        Abort,
+        GetNext
     }
 
     public enum EnumRobotEndType

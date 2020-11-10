@@ -32,5 +32,6 @@ namespace Mirle.Agv.AseMiddler.Model.Configs
         public int SleepLowPowerWatcherSec { get; set; } = 60;
         public bool AgreeAgvcSetCoupler { get; set; } = true;
         public bool IsE84Continue { get; set; } = false;
+        public bool IsEqPortOrderOptimize { get; set; } = true;
     }
 }
