@@ -1995,6 +1995,19 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             Vehicle.TransferCommand.CompleteStatus = CompleteStatus.InterlockError;
                             Vehicle.TransferCommand.IsStopAndClear = true;
+
+                            if (Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod)
+                            {
+                                if (!string.IsNullOrEmpty(Vehicle.TransferCommand.E84ContinueCommandId))
+                                {
+                                    if (Vehicle.mapTransferCommands.ContainsKey(Vehicle.TransferCommand.E84ContinueCommandId))
+                                    {
+                                        var transferCommand = Vehicle.mapTransferCommands[Vehicle.TransferCommand.E84ContinueCommandId];
+                                        transferCommand.CompleteStatus = CompleteStatus.InterlockError;
+                                        transferCommand.IsStopAndClear = true;
+                                    }
+                                }   
+                            }
                         }
                         break;
                     case EnumRobotEndType.RobotError:
@@ -2145,82 +2158,40 @@ namespace Mirle.Agv.AseMiddler.Controller
                             }
                         }
 
-                        var minDis = 999999;
                         bool foundNextCommand = false;
-                        foreach (var transferCommand in transferCommands)
+
+                        bool isEqLoad = IsEqFromAddressId(Vehicle.TransferCommand.UnloadAddressId);
+
+                        if (Vehicle.MainFlowConfig.IsEqPortOrderOptimize)
                         {
-                            string targetAddressId = "";
-
-                            if (transferCommand.EnrouteState == CommandState.LoadEnroute)
+                            var samePortTypeTransferCommands = Vehicle.mapTransferCommands.Values.Where(x => IsSamePortTypeFromTransferCommand(x, isEqLoad)).OrderBy(x => DistanceFromLastPosition(x)).ToList();
+                            if (samePortTypeTransferCommands.Any())
                             {
-                                transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
-                                targetAddressId = transferCommand.LoadAddressId;
-                            }
-                            else
-                            {
-                                transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-                                targetAddressId = transferCommand.UnloadAddressId;
-                            }
-                            bool isTransferCommandToEq = IsEqFromAddressId(targetAddressId);
-
-                            if (isTransferCommandToEq == isEqEnd)
-                            {
-                                if (targetAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
-                                {
-                                    Vehicle.TransferCommand = transferCommand;
-                                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
-                                    foundNextCommand = true;
-                                    break;
-                                }
-
-                                var disTransferCommand = DistanceFromLastPosition(targetAddressId);
-
-                                if (disTransferCommand < minDis)
-                                {
-                                    minDis = disTransferCommand;
-                                    Vehicle.TransferCommand = transferCommand;
-                                    foundNextCommand = true;
-                                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
-                                }
-
+                                var transferCommand = samePortTypeTransferCommands.First();
+                                transferCommand.TransferStep = EnumTransferStep.GetNext;
+                                Vehicle.TransferCommand = transferCommand;
+                                foundNextCommand = true;
+                                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
                             }
                         }
 
                         if (!foundNextCommand)
                         {
-                            foreach (var transferCommand in transferCommands)
+                            var samePortTypeTransferCommands = Vehicle.mapTransferCommands.Values.Where(x => IsNotUnableToLoadBySlotFull(x)).OrderBy(x => DistanceFromLastPosition(x)).ToList();
+                            if (samePortTypeTransferCommands.Any())
                             {
-                                string targetAddressId = "";
-
-                                if (transferCommand.EnrouteState == CommandState.LoadEnroute)
-                                {
-                                    transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
-                                    targetAddressId = transferCommand.LoadAddressId;
-                                }
-                                else
-                                {
-                                    transferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-                                    targetAddressId = transferCommand.UnloadAddressId;
-                                }
-
-                                if (targetAddressId == Vehicle.AseMoveStatus.LastAddress.Id)
-                                {
-                                    Vehicle.TransferCommand = transferCommand;
-                                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
-                                    foundNextCommand = true;
-                                    break;
-                                }
-
-                                var disTransferCommand = DistanceFromLastPosition(targetAddressId);
-
-                                if (disTransferCommand < minDis)
-                                {
-                                    minDis = disTransferCommand;
-                                    Vehicle.TransferCommand = transferCommand;
-                                    foundNextCommand = true;
-                                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
-                                }
+                                var transferCommand = samePortTypeTransferCommands.First();
+                                transferCommand.TransferStep = EnumTransferStep.GetNext;
+                                Vehicle.TransferCommand = transferCommand;
+                                foundNextCommand = true;
+                                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇.命令切換] Transfer Complete Select Another Transfer Command.[{Vehicle.TransferCommand.CommandId}]");
                             }
+                        }
+
+                        if (!foundNextCommand)
+                        {
+                            Vehicle.TransferCommand = Vehicle.mapTransferCommands.Values.ToArray()[0];
+                            Vehicle.TransferCommand.TransferStep = EnumTransferStep.GetNext;
                         }
                     }
                 }
