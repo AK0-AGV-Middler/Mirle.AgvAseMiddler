@@ -1273,7 +1273,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.取貨] Loading, [Direction={loadCmd.PioDirection}][SlotNum={loadCmd.SlotNumber}][Load Adr={loadCmd.PortAddressId}][Load Port Num={loadCmd.PortNumber}][PortId = {Vehicle.TransferCommand.LoadPortId}]");
                 agvcConnector.Loading();
 
-                CheckTimerStopChargeInRobotStep();
+                if (!Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod)
+                {
+                    CheckTimerStopChargeInRobotStep();
+                }
 
                 if (Vehicle.MainFlowConfig.IsSimulation)
                 {
@@ -1605,7 +1608,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         {
                             var transferCommand = Vehicle.mapTransferCommands[bindCommandId];
                             Vehicle.TransferCommand = transferCommand;
-                            UnloadCmdInfo unloadCmd = PreUnloadCheck();
+                            SetupBindUnloadCommand();                           
 
                             if (Vehicle.MainFlowConfig.IsSimulation)
                             {
@@ -1668,6 +1671,19 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
+        }
+
+        private void SetupBindUnloadCommand()
+        {
+            if (Vehicle.TransferCommand.IsStopAndClear) throw new Exception("Stop and Clear.");
+
+            Vehicle.TransferCommand.IsRobotEnd = false;
+            Vehicle.TransferCommand.TransferStep = EnumTransferStep.UnloadWaitEnd;
+
+            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.雙命令.放貨] : Unloading, [SlotNum={Vehicle.TransferCommand.SlotNumber}][Unload Adr={Vehicle.TransferCommand.UnloadAddressId}][PortId = {Vehicle.TransferCommand.UnloadPortId}]");
+            agvcConnector.Unloading();
+
+            CheckTimerStopChargeInRobotStep();
         }
 
         private bool IsNotUnableToLoadBySlotFull(AgvcTransferCommand x)
@@ -1768,6 +1784,30 @@ namespace Mirle.Agv.AseMiddler.Controller
             Vehicle.TransferCommand.IsRobotEnd = false;
             Vehicle.TransferCommand.TransferStep = EnumTransferStep.UnloadWaitEnd;
 
+            CheckSlotStatusCanUnload();
+
+            UnloadCmdInfo unloadCmd = GetUnloadCommand();
+            if (Vehicle.AseMoveStatus.LastAddress.Id != Vehicle.TransferCommand.UnloadAddressId)
+            {
+                Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                throw new Exception("Move to unload.");
+            }
+
+            if (unloadCmd.PortNumber == "9")
+            {
+                Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+                throw new Exception("Find real unload port.");
+            }
+
+            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}][PortId = {Vehicle.TransferCommand.UnloadPortId}]");
+            agvcConnector.Unloading();
+
+            CheckTimerStopChargeInRobotStep();
+            return unloadCmd;
+        }
+
+        private void CheckSlotStatusCanUnload()
+        {
             switch (Vehicle.TransferCommand.SlotNumber)
             {
                 case EnumSlotNumber.L:
@@ -1789,25 +1829,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                     }
                     break;
             }
-
-            UnloadCmdInfo unloadCmd = GetUnloadCommand();
-            if (Vehicle.AseMoveStatus.LastAddress.Id != Vehicle.TransferCommand.UnloadAddressId)
-            {
-                Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-                throw new Exception("Move to unload.");
-            }
-
-            if (unloadCmd.PortNumber == "9")
-            {
-                Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-                throw new Exception("Find real unload port.");
-            }
-
-            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}][PortId = {Vehicle.TransferCommand.UnloadPortId}]");
-            agvcConnector.Unloading();
-
-            CheckTimerStopChargeInRobotStep();
-            return unloadCmd;
         }
 
         private void CheckTimerStopChargeInRobotStep()
