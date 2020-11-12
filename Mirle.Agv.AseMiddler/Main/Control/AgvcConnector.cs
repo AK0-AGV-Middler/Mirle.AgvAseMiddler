@@ -357,7 +357,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
                 }
 
-                SpinWait.SpinUntil(()=>false,Vehicle.AgvcConnectorConfig.ScheduleIntervalMs);
+                SpinWait.SpinUntil(() => false, Vehicle.AgvcConnectorConfig.ScheduleIntervalMs);
             }
         }
         private void PrimarySend(ref ScheduleWrapper scheduleWrapper)
@@ -435,9 +435,9 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 switch (cmdNum)
                 {
-                    case EnumCmdNum.Cmd38_GuideInfoResponse:
-                        Receive_Cmd38_GuideInfoResponse(this, tcpIpEventArgs);
-                        break;
+                    //case EnumCmdNum.Cmd38_GuideInfoResponse:
+                    //    Receive_Cmd38_GuideInfoResponse(this, tcpIpEventArgs);
+                    //    break;
                     case EnumCmdNum.Cmd52_AvoidCompleteResponse:
                         Receive_Cmd52_AvoidCompleteResponse(this, tcpIpEventArgs);
                         break;
@@ -520,7 +520,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     }
                 }
 
-                SpinWait.SpinUntil(()=>false,Vehicle.AgvcConnectorConfig.ScheduleIntervalMs);
+                SpinWait.SpinUntil(() => false, Vehicle.AgvcConnectorConfig.ScheduleIntervalMs);
             }
         }
 
@@ -569,6 +569,28 @@ namespace Mirle.Agv.AseMiddler.Controller
                             if (returnCode == TrxTcpIp.ReturnCode.Normal)
                             {
                                 ReceiveSent_Cmd32_TransCompleteResponse(response);
+                            }
+                            else
+                            {
+                                if (scheduleWrapper.RetrySendWaitCounter <= 0)
+                                {
+                                    OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
+                                }
+                                else
+                                {
+                                    scheduleWrapper.RetrySendWaitCounter--;
+                                    PrimarySendWaitQueue.Enqueue(scheduleWrapper);
+                                }
+                            }
+                        }
+                        break;
+                    case 138:
+                        {
+                            TrxTcpIp.ReturnCode returnCode = TrxTcpIp.ReturnCode.Timeout;
+                            returnCode = ClientAgent.TrxTcpIp.sendRecv_Google(scheduleWrapper.Wrapper, out ID_38_GUIDE_INFO_RESPONSE response, out string rtnMsg);
+                            if (returnCode == TrxTcpIp.ReturnCode.Normal)
+                            {
+                                Receive_Cmd38_GuideInfoResponse(response);
                             }
                             else
                             {
@@ -695,7 +717,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     Task.Run(() =>
                     {
-                        SpinWait.SpinUntil(()=>false,Vehicle.AgvcConnectorConfig.AskReserveIntervalMs);
+                        SpinWait.SpinUntil(() => false, Vehicle.AgvcConnectorConfig.AskReserveIntervalMs);
                         IsSleepByAskReserveFail = false;
                     });
                 }
@@ -1421,7 +1443,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 Send_Cmd136_CstIdReadReport(EnumSlotNumber.L); //200625 dabid+
             }
-            SpinWait.SpinUntil(()=>false,50);
+            SpinWait.SpinUntil(() => false, 50);
             if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty)
             {
                 Send_Cmd136_CstRemove(EnumSlotNumber.R);
@@ -1883,6 +1905,28 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
+        public void Receive_Cmd38_GuideInfoResponse(ID_38_GUIDE_INFO_RESPONSE response)
+        {
+            try
+            {
+                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取得.路線] ID_38_GUIDE_INFO_RESPONSE.");
+
+                ShowGuideInfoResponse(response);
+
+                Vehicle.AseMovingGuide = new AseMovingGuide(response);
+                Vehicle.AseMoveStatus.IsMoveEnd = false;
+                mainFlowHandler.SetupAseMovingGuideMovingSections();
+                SetupNeedReserveSections();
+                StatusChangeReport();
+                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"IsMoveEnd Need False And Cur IsMoveEnd = {Vehicle.AseMoveStatus.IsMoveEnd.ToString()}");
+
+                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, Vehicle.AseMovingGuide.GetInfo());
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
         private void ShowGuideInfoResponse(ID_38_GUIDE_INFO_RESPONSE response)
         {
             try
@@ -1907,7 +1951,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 wrapper.ID = WrapperMessage.GuideInfoReqFieldNumber;
                 wrapper.GuideInfoReq = request;
 
-                SendWrapperToSchedule(wrapper, false, false);
+                SendWrapperToSchedule(wrapper, false, true);
             }
             catch (Exception ex)
             {
