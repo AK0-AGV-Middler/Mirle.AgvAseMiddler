@@ -1371,6 +1371,10 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             SendRecv_Cmd136_TransferEventReport(EventType.UnloadArrivals, Vehicle.TransferCommand.UnloadPortId);
         }
+        public void ReportNonSendWaitUnloadArrival()
+        {
+            Send_Cmd136_TransferEventReport(EventType.UnloadArrivals, Vehicle.TransferCommand.CommandId, Vehicle.TransferCommand.SlotNumber, Vehicle.TransferCommand.UnloadPortId);
+        }
         public void Unloading()
         {
             Send_Cmd136_TransferEventReport(EventType.Vhunloading, Vehicle.TransferCommand.CommandId, Vehicle.TransferCommand.SlotNumber, Vehicle.TransferCommand.UnloadPortId);

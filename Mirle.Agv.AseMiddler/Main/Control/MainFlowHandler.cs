@@ -1681,6 +1681,8 @@ namespace Mirle.Agv.AseMiddler.Controller
             Vehicle.TransferCommand.TransferStep = EnumTransferStep.UnloadWaitEnd;
 
             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.雙命令.放貨] : Unloading, [SlotNum={Vehicle.TransferCommand.SlotNumber}][Unload Adr={Vehicle.TransferCommand.UnloadAddressId}][PortId = {Vehicle.TransferCommand.UnloadPortId}]");
+
+            agvcConnector.ReportNonSendWaitUnloadArrival();
             agvcConnector.Unloading();
 
             CheckTimerStopChargeInRobotStep();
