@@ -266,9 +266,9 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void VehicleLocationInitialAndThreadsInitial()
         {
-            if (Vehicle.MainFlowConfig.IsSimulation)
+            try
             {
-                try
+                if (Vehicle.MainFlowConfig.IsSimulation)
                 {
                     AsePositionArgs positionArgs = new AsePositionArgs()
                     {
@@ -277,24 +277,26 @@ namespace Mirle.Agv.AseMiddler.Controller
                     };
                     asePackage.ReceivePositionArgsQueue.Enqueue(positionArgs);
                 }
-                catch (Exception ex)
+                else
                 {
-                    Vehicle.AseMoveStatus.LastMapPosition = new MapPosition();
-                    LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+                    if (Vehicle.IsLocalConnect)
+                    {
+                        asePackage.AllAgvlStatusReportRequest();
+                    }
                 }
+                StartVisitTransferSteps();
+                StartTrackPosition();
+                StartWatchChargeStage();
+                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"讀取到的電量為{Vehicle.BatteryLog.InitialSoc}");
+
             }
-            else
+            catch (Exception ex)
             {
-                if (Vehicle.IsLocalConnect)
-                {
-                    asePackage.AllAgvlStatusReportRequest();
-                }
+                isIniOk = false;
+                OnComponentIntialDoneEvent?.Invoke(this, new InitialEventArgs(false, "事件"));
+
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
-            StartVisitTransferSteps();
-            StartTrackPosition();
-            StartWatchChargeStage();
-            var msg = $"讀取到的電量為{Vehicle.BatteryLog.InitialSoc}";
-            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
         }
 
         #endregion
@@ -1996,12 +1998,6 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                if (IsStopChargTimeoutInRobotStep)
-                {
-                    IsStopChargTimeoutInRobotStep = false;
-                    SetAlarmFromAgvm(14);
-                }
-
                 switch (robotEndType)
                 {
                     case EnumRobotEndType.Finished:
@@ -2551,30 +2547,75 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 try
                 {
-                    Vehicle.VehicleIdle = IsVehicleIdle();//200824 dabid+
-                    Vehicle.LowPower = IsLowPower();//200824 dabid+stop
-                    Vehicle.LowPowerStartChargeTimeout = IsLowPowerStartChargeTimeout;//200824 dabid+
-                    if (Vehicle.AutoState == EnumAutoState.Auto && IsVehicleIdle() && IsLowPower() && !IsLowPowerStartChargeTimeout)
+                    if (!Vehicle.MainFlowConfig.IsSimulation)
                     {
-                        LowPowerStartCharge(Vehicle.AseMoveStatus.LastAddress);
+                        if (!asePackage.psWrapper.IsConnected())
+                        {
+                            throw new Exception("AsePackage disconnect. Can not get Battery and Charging Status.");
+                        }
                     }
-                    if (Vehicle.AseBatteryStatus.Percentage < Vehicle.MainFlowConfig.HighPowerPercentage - 21 && !Vehicle.IsCharging) //200701 dabid+
+
+                    UpdateBatteryAndChargingeStatus();
+
+                    Vehicle.LowPower = IsLowPower();//200824 dabid+stop
+                    Vehicle.VehicleIdle = IsVehicleIdle();//200824 dabid+
+
+                    if (Vehicle.AutoState == EnumAutoState.Auto && IsVehicleIdle())
+                    {                     
+                        if (IsLowPower())
+                        {
+                            LowPowerStartCharge(Vehicle.AseMoveStatus.LastAddress);
+                        }                        
+                    }
+
+                    if (IsMuchLowPower() && !Vehicle.IsCharging) //200701 dabid+
                     {
-                        SetAlarmFromAgvm(2);
+                        throw new Exception($"[AutoState={Vehicle.AutoState}][IsVehicleIdle()={IsVehicleIdle()}][Percentage={Vehicle.AseBatteryStatus.Percentage}][HighThreshold={Vehicle.MainFlowConfig.HighPowerPercentage}]");
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Low Power Charge Fail. {ex.Message}");
+
+                    SetAlarmFromAgvm(2);
                 }
 
                 SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.WatchLowPowerSleepTimeMs);
             }
         }
 
+        private bool IsMuchLowPower()
+        {
+            return Vehicle.AseBatteryStatus.Percentage + 10 <= Vehicle.MainFlowConfig.HighPowerPercentage;
+        }
+
+        private void UpdateBatteryAndChargingeStatus()
+        {
+            asePackage.SendChargeStatusRequest();
+            asePackage.SendBatteryStatusRequest();
+            SpinWait.SpinUntil(() => asePackage.IsBatteryRequestReply && asePackage.IsChargeStatusRequestReply, 15 * 1000);
+            if (!asePackage.IsBatteryRequestReply)
+            {
+                throw new Exception("Battery status request no reply.");
+            }
+
+            if (!asePackage.IsChargeStatusRequestReply)
+            {
+                throw new Exception("Charge status request no reply.");
+            }
+        }
+
         private bool IsVehicleIdle()
         {
-            return Vehicle.TransferCommand.TransferStep == EnumTransferStep.Idle;
+            if (Vehicle.TransferCommand.TransferStep ==  EnumTransferStep.Idle)
+            {
+                return true;
+            }
+            if (!Vehicle.mapTransferCommands.Any())
+            {
+                return true;
+            }
+            return false;
         }
 
         public void StartWatchChargeStage()
@@ -2600,56 +2641,48 @@ namespace Mirle.Agv.AseMiddler.Controller
             StartCharge(Vehicle.AseMoveStatus.LastAddress);
         }
 
+        private object _StartOrStopChargeLocker = new object();
+
         private void StartCharge(MapAddress endAddress, int chargeTimeSec = -1)
         {
-            IsArrivalCharge = true;
-
             try
             {
-                var address = endAddress;
-                var percentage = Vehicle.AseBatteryStatus.Percentage;
-                var highPercentage = Vehicle.MainFlowConfig.HighPowerPercentage;
-
-                if (address.IsCharger())
-                {
-                    if (IsHighPower())
+                lock (_StartOrStopChargeLocker)
+                {                   
+                    if (endAddress.IsCharger())
                     {
-                        var msg = $"Vehicle arrival {address.Id},Charge Direction = {address.ChargeDirection},Precentage = {percentage} > {highPercentage}(Threshold),  thus NOT send charge command.";
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
-                        return;
+                        if (IsHighPower())
+                        {
+                            var msg = $"Vehicle arrival {endAddress.Id},Charge Direction = {endAddress.ChargeDirection},Precentage = {Vehicle.AseBatteryStatus.Percentage} > {Vehicle.MainFlowConfig.HighPowerPercentage}(Threshold),  thus NOT send charge command.";
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+                            return;
+                        }
+
+                        agvcConnector.ChargHandshaking();
+                        Vehicle.IsCharging = true;
+
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $@"Start Charge, Vehicle arrival {endAddress.Id},Charge Direction = {endAddress.ChargeDirection},Precentage = {Vehicle.AseBatteryStatus.Percentage}.");
+
+                        if (Vehicle.MainFlowConfig.IsSimulation)
+                        {
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "[充電.成功] Start Charge success.");
+                            return;
+                        }
+
+                        asePackage.StartCharge(endAddress.ChargeDirection);
+
+                        SpinWait.SpinUntil(() => asePackage.IsStartChargeReply, Vehicle.MainFlowConfig.StartChargeWaitingTimeoutMs);
+
+                        if (asePackage.IsStartChargeReply)
+                        {
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "[充電.成功] Start Charge success.");
+                        }
+                        else
+                        {
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[充電.失敗] Start Charge fail.[asePackage.IsStartChargeReply = {asePackage.IsStartChargeReply}]");
+                            SetAlarmFromAgvm(000013);
+                        }
                     }
-
-                    agvcConnector.ChargHandshaking();
-                    Vehicle.IsCharging = true;
-
-                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $@"Start Charge, Vehicle arrival {address.Id},Charge Direction = {address.ChargeDirection},Precentage = {percentage}.");
-
-                    if (Vehicle.MainFlowConfig.IsSimulation)
-                    {
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "[充電.成功] Start Charge success.");
-                        return;
-                    }
-                    Vehicle.CheckStartChargeReplyEnd = false;
-                    asePackage.StartCharge(address.ChargeDirection);
-
-                    SpinWait.SpinUntil(() => Vehicle.CheckStartChargeReplyEnd, 30 * 1000);
-
-                    if (Vehicle.CheckStartChargeReplyEnd)
-                    {
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "[充電.成功] Start Charge success.");
-                        agvcConnector.Charging();
-                        IsLowPowerStartChargeTimeout = false;
-                    }
-                    else
-                    {
-                        Vehicle.IsCharging = false;
-                        SetAlarmFromAgvm(000013);
-                        asePackage.ChargeStatusRequest();
-                        SpinWait.SpinUntil(() => false, 500);
-                        asePackage.StopCharge();
-                    }
-
-                    Vehicle.CheckStartChargeReplyEnd = true;
                 }
             }
             catch (Exception ex)
@@ -2657,157 +2690,111 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
 
-            IsArrivalCharge = false;
+            UpdateBatteryAndChargingeStatus();
         }
 
         private void LowPowerStartCharge(MapAddress lastAddress)
         {
             try
             {
-                Vehicle.ArrivalCharge = IsArrivalCharge;//200824 dabid for Watch Not AUTO Charge
-                if (IsArrivalCharge) return;
-
-                var address = lastAddress;
-                var percentage = Vehicle.AseBatteryStatus.Percentage;
-                var pos = Vehicle.AseMoveStatus.LastMapPosition;
-                Vehicle.LastAddress = address.Id;
-                Vehicle.IsCharger = address.IsCharger();//200824 dabid for Watch Not AUTO Charge
-                if (address.IsCharger())
+                lock (_StartOrStopChargeLocker)
                 {
+                    Vehicle.ArrivalCharge = IsArrivalCharge;//200824 dabid for Watch Not AUTO Charge
+                    Vehicle.LastAddress = lastAddress.Id;
+                    Vehicle.IsCharger = lastAddress.IsCharger();//200824 dabid for Watch Not AUTO Charge
+
+                    //if (IsArrivalCharge)
+                    //{
+                    //    throw new Exception("Vehicle is Arrival-Charging.");
+                    //}
+
                     if (Vehicle.IsCharging)
                     {
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[低電量閒置.自動充電] Vehicle is Charging.");
                         return;
                     }
-                    else
+
+                    if (!lastAddress.IsCharger())
                     {
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[低電量閒置.自動充電] Addr = {address.Id},Precentage = {percentage} < {Vehicle.MainFlowConfig.HighPowerPercentage}(Threshold).");
+                        throw new Exception($"At {lastAddress.Id} is not coupler.");
                     }
 
-                    if ((DateTime.Now - LowPowerStartChargeTimeStamp).TotalSeconds >= Vehicle.MainFlowConfig.LowPowerRepeatChargeIntervalSec)
-                    {
-                        LowPowerStartChargeTimeStamp = DateTime.Now;
-                        LowPowerRepeatedlyChargeCounter = 0;
-                    }
-                    else
-                    {
-                        LowPowerRepeatedlyChargeCounter++;
-                        if (LowPowerRepeatedlyChargeCounter > Vehicle.MainFlowConfig.LowPowerRepeatedlyChargeCounterMax)
-                        {
-                            IsLowPowerStartChargeTimeout = true;
-                            Task.Run(() =>
-                            {
-                                SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.SleepLowPowerWatcherSec * 1000);
-                                IsLowPowerStartChargeTimeout = false;
-                            });
-                            Vehicle.LowPowerRepeatedlyChargeCounter = LowPowerRepeatedlyChargeCounter;
-                            return;
-                        }
-                    }
-                    agvcConnector.ChargHandshaking();
+                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[低電量閒置.自動充電] Low power charging.");
 
                     Vehicle.IsCharging = true;
 
-                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $@"Start Charge, Vehicle arrival {address.Id},Charge Direction = {address.ChargeDirection},Precentage = {percentage}.");
+                    agvcConnector.ChargHandshaking();
 
-                    if (Vehicle.MainFlowConfig.IsSimulation) return;
-
-                    Vehicle.CheckStartChargeReplyEnd = false;
-
-                    int retryCount = Vehicle.MainFlowConfig.ChargeRetryTimes;
-
-                    asePackage.StartCharge(address.ChargeDirection);
-
-                    SpinWait.SpinUntil(() => Vehicle.CheckStartChargeReplyEnd, Vehicle.MainFlowConfig.StartChargeWaitingTimeoutMs);                    
-
-                    if (Vehicle.CheckStartChargeReplyEnd)
+                    if (Vehicle.MainFlowConfig.IsSimulation)
                     {
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "Start Charge success.");
-                        agvcConnector.Charging();
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[低電量閒置.自動充電] Simulation Low power charging.");
+                        return;
+                    }
+
+                    asePackage.StartCharge(lastAddress.ChargeDirection);
+
+                    SpinWait.SpinUntil(() => asePackage.IsStartChargeReply, Vehicle.MainFlowConfig.StartChargeWaitingTimeoutMs);
+
+                    if (asePackage.IsStartChargeReply)
+                    {
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "[低電量閒置.自動充電.成功] Low power charge success.");
                     }
                     else
                     {
-                        Vehicle.IsCharging = false;
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[低電量閒置.自動充電.失敗] Low power charge fail.[asePackage.IsStartChargeReply = {asePackage.IsStartChargeReply}]");
                         SetAlarmFromAgvm(000013);
-                        asePackage.ChargeStatusRequest();
-                        SpinWait.SpinUntil(() => false, 500);
-                        asePackage.StopCharge();
                     }
-
-                    Vehicle.CheckStartChargeReplyEnd = true;
                 }
             }
             catch (Exception ex)
             {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Low Power Charge Fail, {ex.Message}");
             }
+
+            UpdateBatteryAndChargingeStatus();
         }
 
         public void StopCharge()
         {
             try
             {
-                //if (IsStopCharging) return;
-                IsStopCharging = true;
-
-                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $@"[斷充.開始] Try STOP charge.[IsCharging = {Vehicle.IsCharging}]");
-
-                if (Vehicle.AseMoveStatus.LastAddress.IsCharger() || Vehicle.IsCharging)
+                lock (_StartOrStopChargeLocker)
                 {
-                    agvcConnector.ChargHandshaking();
+                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $@"[斷充.開始] Try STOP charge.[IsCharging = {Vehicle.IsCharging}][AddressIsCharger={Vehicle.AseMoveStatus.LastAddress.IsCharger()}]");
 
-                    if (Vehicle.MainFlowConfig.IsSimulation)
+                    if (Vehicle.AseMoveStatus.LastAddress.IsCharger() || Vehicle.IsCharging)
                     {
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[斷充.成功] Stop Charge success.");
-                        Vehicle.IsCharging = false;
-                        return;
-                    }
+                        agvcConnector.ChargHandshaking();
 
-                    //in starting charge
-                    SpinWait.SpinUntil(() => Vehicle.CheckStartChargeReplyEnd, Vehicle.MainFlowConfig.StopChargeWaitingTimeoutMs);
+                        if (Vehicle.MainFlowConfig.IsSimulation)
+                        {
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[斷充.成功] Stop Charge success.");
+                            Vehicle.IsCharging = false;
+                            return;
+                        }
 
-                    int retryCount = Vehicle.MainFlowConfig.DischargeRetryTimes;
-                    Vehicle.IsCharging = true;
-
-                    for (int i = 0; i < retryCount; i++)
-                    {
                         asePackage.StopCharge();
 
-                        SpinWait.SpinUntil(() => !Vehicle.IsCharging, Vehicle.MainFlowConfig.StopChargeWaitingTimeoutMs);
+                        SpinWait.SpinUntil(() => asePackage.IsStopChargeReply, Vehicle.MainFlowConfig.StopChargeWaitingTimeoutMs);
 
-                        asePackage.ChargeStatusRequest();
-                        SpinWait.SpinUntil(() => false, 500);
-
-                        if (!Vehicle.IsCharging)
+                        if (asePackage.IsStopChargeReply)
                         {
-                            break;
-                        }
-                    }
-
-                    if (!Vehicle.IsCharging)
-                    {
-                        agvcConnector.ChargeOff();
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[斷充.成功] Stop Charge success.");
-                    }
-                    else
-                    {
-                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[斷充.逾時] Stop Charge Timeout.");
-                        if (IsRobotStep())
-                        {
-                            IsStopChargTimeoutInRobotStep = true;
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[斷充.成功] Stop Charge success.");
                         }
                         else
                         {
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[斷充.逾時] Stop Charge Timeout.[asePackage.IsStopChargeReply = {asePackage.IsStopChargeReply}]");
                             SetAlarmFromAgvm(000014);
                         }
                     }
                 }
-                IsStopCharging = false;
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                IsStopCharging = false;
             }
+
+            UpdateBatteryAndChargingeStatus();
         }
 
         private bool IsRobotStep()

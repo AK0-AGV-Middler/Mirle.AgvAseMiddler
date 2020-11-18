@@ -28,6 +28,11 @@ namespace Mirle.Agv.AseMiddler.Controller
         public long LastUpdatePositionSystemByte { get; set; } = 0;
         public bool ResetSystemByte { get; set; } = true;
 
+        public bool IsBatteryRequestReply { get; set; }
+        public bool IsChargeStatusRequestReply { get; set; }
+        public bool IsStartChargeReply { get; set; }
+        public bool IsStopChargeReply { get; set; }
+
         private Thread thdWatchWifiSignalStrength;
         public bool IsWatchWifiSignalStrengthPause { get; set; } = false;
 
@@ -329,6 +334,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
+                IsBatteryRequestReply = false;
                 PrimarySendEnqueue("P35", "");
             }
             catch (Exception ex)
@@ -608,10 +614,11 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
-        public void ChargeStatusRequest()
+        public void SendChargeStatusRequest()
         {
             try
             {
+                IsChargeStatusRequestReply = false;
                 PrimarySendEnqueue("P31", "4");
             }
             catch (Exception ex)
@@ -1041,13 +1048,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                 bool isCharging = psMessage.Substring(0, 1) == "1";
                 if (isCharging)
                 {
-                    Vehicle.CheckStartChargeReplyEnd = true;
+                    IsStartChargeReply = true;
                 }
                 else
                 {
-                    Vehicle.CheckStopChargeReplyEnd = true;
+                    IsStopChargeReply = true;
                 }
                 Vehicle.IsCharging = isCharging;
+                IsChargeStatusRequestReply = true;
                 OnStatusChangeReportEvent?.Invoke(this, $"Local Update Charge Status :[{ Vehicle.IsCharging }]");
             }
             catch (Exception ex)
@@ -1504,7 +1512,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 }
 
                 Vehicle.AseBatteryStatus = aseBatteryStatus;
-
+                IsBatteryRequestReply = true;
             }
             catch (Exception ex)
             {
@@ -1814,6 +1822,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
+                IsStopChargeReply = false;
                 PrimarySendEnqueue("P47", "0");
             }
             catch (Exception ex)
@@ -1826,6 +1835,8 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
+                IsStartChargeReply = false;
+
                 string chargeDirectionString;
                 switch (chargeDirection)
                 {

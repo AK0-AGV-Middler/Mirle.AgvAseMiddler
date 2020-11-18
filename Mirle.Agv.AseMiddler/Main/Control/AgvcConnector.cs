@@ -1419,16 +1419,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             Vehicle.ChargeStatus = VhChargeStatus.ChargeStatusHandshaking;
             StatusChangeReport();
         }
-        public void Charging()
-        {
-            Vehicle.ChargeStatus = VhChargeStatus.ChargeStatusCharging;
-            StatusChangeReport();
-        }
-        public void ChargeOff()
-        {
-            Vehicle.ChargeStatus = VhChargeStatus.ChargeStatusNone;
-            StatusChangeReport();
-        }
         public void PauseReply(ushort seqNum, int replyCode, PauseEvent type)
         {
             Send_Cmd139_PauseResponse(seqNum, replyCode, type);
