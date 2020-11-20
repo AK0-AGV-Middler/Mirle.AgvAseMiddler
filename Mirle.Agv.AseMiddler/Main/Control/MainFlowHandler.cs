@@ -2653,8 +2653,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     {
                         if (IsHighPower())
                         {
-                            var msg = $"Vehicle arrival {endAddress.Id},Charge Direction = {endAddress.ChargeDirection},Precentage = {Vehicle.AseBatteryStatus.Percentage} > {Vehicle.MainFlowConfig.HighPowerPercentage}(Threshold),  thus NOT send charge command.";
-                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Vehicle arrival {endAddress.Id},Charge Direction = {endAddress.ChargeDirection},Precentage = {Vehicle.AseBatteryStatus.Percentage} > {Vehicle.MainFlowConfig.HighPowerPercentage}(Threshold),  thus NOT send charge command.");
                             return;
                         }
 
