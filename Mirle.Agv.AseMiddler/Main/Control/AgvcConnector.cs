@@ -1967,7 +1967,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             try
             {
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"AgvcConnector : Get [{receive.CancelAction}] command");
+                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[收到.命令.取消] Get [{receive.CancelAction}] command");
 
                 if (receive.CancelAction == CancelActionType.CmdEms)
                 {
@@ -1977,39 +1977,39 @@ namespace Mirle.Agv.AseMiddler.Controller
                     return;
                 }
 
-                throw new Exception($"AgvcConnector : AGVL can not Cancel or Abort now.");
+                //throw new Exception($"AgvcConnector : AGVL can not Cancel or Abort now.");
 
                 if (Vehicle.mapTransferCommands.Count == 0)
                 {
-                    throw new Exception($"AgvcConnector : Vehicle Idle, reject [{receive.CancelAction}].");
+                    throw new Exception($"Vehicle Idle, reject [{receive.CancelAction}].");
                 }
 
                 var cmdId = receive.CmdID.Trim();
 
                 if (!Vehicle.mapTransferCommands.ContainsKey(cmdId))
                 {
-                    throw new Exception($"AgvcConnector : No [{cmdId}] to cancel, reject [{receive.CancelAction}].");
+                    throw new Exception($"No [{cmdId}] to cancel, reject [{receive.CancelAction}].");
                 }
 
                 switch (receive.CancelAction)
                 {
                     case CancelActionType.CmdCancel:
                     case CancelActionType.CmdAbort:
-                        Send_Cmd137_TransferCancelResponse(e.iSeqNum, (int)EnumAgvcReplyCode.Accept, receive);
                         mainFlowHandler.AgvcConnector_OnCmdCancelAbortEvent(e.iSeqNum, receive);
+                        Send_Cmd137_TransferCancelResponse(e.iSeqNum, (int)EnumAgvcReplyCode.Accept, receive);
                         break;
                     case CancelActionType.CmdCancelIdMismatch:
                     case CancelActionType.CmdCancelIdReadFailed:
                     case CancelActionType.CmdNone:
                     default:
-                        throw new Exception($"AgvcConnector : Reject Unkonw CancelAction [{receive.CancelAction}].");
+                        throw new Exception($"Reject Unkonw CancelAction [{receive.CancelAction}].");
                 }
             }
             catch (Exception ex)
             {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name,$"[收到.命令.取消.失敗] {ex.Message}");
+
                 Send_Cmd137_TransferCancelResponse(e.iSeqNum, (int)EnumAgvcReplyCode.Reject, receive);
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
         public void Send_Cmd137_TransferCancelResponse(ushort seqNum, int replyCode, ID_37_TRANS_CANCEL_REQUEST receive)
