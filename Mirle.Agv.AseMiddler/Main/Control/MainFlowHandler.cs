@@ -3425,6 +3425,8 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 lock (_ModeChangeLocker)
                 {
+                    CheckLocalSwitchToManualAbortCommand(autoState);
+
                     StopClearAndReset();
 
                     if (Vehicle.AutoState != autoState)
@@ -3464,6 +3466,17 @@ namespace Mirle.Agv.AseMiddler.Controller
                     asePackage.RequestVehicleToManual();
                 }
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
+        private void CheckLocalSwitchToManualAbortCommand(EnumAutoState autoState)
+        {
+            if (autoState == EnumAutoState.Manual)
+            {
+                if (Vehicle.mapTransferCommands.Any())
+                {
+                    SetAlarmFromAgvm(59);
+                }
             }
         }
 
