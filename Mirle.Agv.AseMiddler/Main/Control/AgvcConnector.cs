@@ -4,9 +4,8 @@ using com.mirle.iibg3k0.ttc.Common.TCPIP;
 using com.mirle.iibg3k0.ttc.Common.TCPIP.DecodRawData;
 using Google.Protobuf.Collections;
 using Mirle.Agv.AseMiddler.Model;
-using Mirle.Agv.AseMiddler.Model.Configs;
-using Mirle.Agv.AseMiddler.Model.TransferSteps;
 using Mirle.Tools;
+using SimpleWifi;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -15,19 +14,14 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms.VisualStyles;
 
 namespace Mirle.Agv.AseMiddler.Controller
 {
     public class AgvcConnector
     {
         #region Events
-        public event EventHandler<string> OnMessageShowOnMainFormEvent;
         public event EventHandler<AgvcTransferCommand> OnInstallTransferCommandEvent;
         public event EventHandler<AseMovingGuide> OnAvoideRequestEvent;
-        public event EventHandler<string> OnCmdReceiveEvent;
-        public event EventHandler<string> OnCmdSendEvent;
-        public event EventHandler<string> OnPassReserveSectionEvent;
         public event EventHandler<AseCarrierSlotStatus> OnRenameCassetteIdEvent;
         public event EventHandler OnSendRecvTimeoutEvent;
         public event EventHandler<EnumSlotNumber> OnCstRenameEvent;
@@ -58,6 +52,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         public TcpIpAgent ClientAgent { get; private set; }
         public string AgvcConnectorAbnormalMsg { get; set; } = "";
         public bool IsAgvcReplyBcrRead { get; set; } = false;
+        public string CommLogMsg { get; set; } = "";
 
         public AgvcConnector(MainFlowHandler mainFlowHandler)
         {
@@ -146,16 +141,14 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 if (ClientAgent != null)
                 {
-                    string msg = $"AgvcConnector : Disconnect Stop, [IsNull={IsClientAgentNull()}][IsConnect={IsConnected()}]";
-                    LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+                    LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"AgvcConnector : Disconnect Stop, [IsNull={IsClientAgentNull()}][IsConnect={IsConnected()}]");
 
                     //ClientAgent.stop();//dabid- 200822
                     //ClientAgent = null;
                 }
                 else
                 {
-                    string msg = $"ClientAgent is null cannot disconnect";
-                    LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+                    LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"ClientAgent is null cannot disconnect");
                 }
             }
             catch (Exception ex)
@@ -174,16 +167,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                 }
                 else
                 {
-                    string msg = $"Already connect cannot connect again.";
-                    LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+                    LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Already connect cannot connect again.");
                 }
             }
             else
             {
                 CreatTcpIpClientAgent();
                 Connect();
-                string msg = $"ClientAgent is null cannot connect.";
-                LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+                LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"ClientAgent is null cannot connect.");
             }
 
         }
@@ -204,14 +195,13 @@ namespace Mirle.Agv.AseMiddler.Controller
             if (!Vehicle.IsAgvcConnect)
             {
                 mainFlowHandler.AgvcDisconnected();
-                //mainFlowHandler.SetAlarmFromAgvm(56);
             }
             var isConnect = agent.IsConnection ? " Connect " : " Dis-Connect ";
             mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"AgvcConnector : {agent.Name},AgvcConnection = {isConnect}");
         }
         private void EventInitial()
         {
-            foreach (var item in Enum.GetValues(typeof(EnumCmdNum)))
+            foreach (var item in Enum.GetValues(typeof(EnumCmdNums)))
             {
                 ClientAgent.addTcpIpReceivedHandler((int)item, LogRecvMsg);
                 ClientAgent.addTcpIpReceivedHandler((int)item, RecieveCommandMediator);
@@ -222,71 +212,68 @@ namespace Mirle.Agv.AseMiddler.Controller
         }
         private void LogRecvMsg(object sender, TcpIpEventArgs e)
         {
-            string msg = $"[RECV] [SeqNum = {e.iSeqNum}][{e.iPacketID}][{(EnumCmdNum)int.Parse(e.iPacketID)}][ObjPacket = {e.objPacket}]";
-            OnCmdReceiveEvent?.Invoke(this, msg);
-            LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+            LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[RECV] [SeqNum = {e.iSeqNum}][{e.iPacketID}][{(EnumCmdNums)int.Parse(e.iPacketID)}][ObjPacket = {e.objPacket}]");
         }
         private void RecieveCommandMediator(object sender, TcpIpEventArgs e)
         {
-            EnumCmdNum cmdNum = (EnumCmdNum)int.Parse(e.iPacketID);
+            EnumCmdNums cmdNum = (EnumCmdNums)int.Parse(e.iPacketID);
 
             if (Vehicle.AutoState != EnumAutoState.Auto && !IsApplyOnly(cmdNum))
             {
-                var msg = $"AgvcConnector : Manual mode, Ignore Agvc Command";
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"AgvcConnector : Manual mode, Ignore Agvc Command");
                 return;
             }
 
             switch (cmdNum)
             {
-                case EnumCmdNum.Cmd000_EmptyCommand:
+                case EnumCmdNums.Cmd000_EmptyCommand:
                     break;
-                case EnumCmdNum.Cmd11_CouplerInfoReport:
+                case EnumCmdNums.Cmd11_CouplerInfoReport:
                     PrimaryReceiveQueue.Enqueue(e);
                     break;
-                case EnumCmdNum.Cmd31_TransferRequest:
+                case EnumCmdNums.Cmd31_TransferRequest:
                     PrimaryReceiveQueue.Enqueue(e);
                     break;
-                case EnumCmdNum.Cmd38_GuideInfoResponse:
+                case EnumCmdNums.Cmd38_GuideInfoResponse:
                     SecondaryReceiveQueue.Enqueue(e);
                     break;
-                case EnumCmdNum.Cmd35_CarrierIdRenameRequest:
+                case EnumCmdNums.Cmd35_CarrierIdRenameRequest:
                     PrimaryReceiveQueue.Enqueue(e);
                     break;
-                case EnumCmdNum.Cmd37_TransferCancelRequest:
+                case EnumCmdNums.Cmd37_TransferCancelRequest:
                     PrimaryReceiveQueue.Enqueue(e);
                     break;
-                case EnumCmdNum.Cmd39_PauseRequest:
+                case EnumCmdNums.Cmd39_PauseRequest:
                     PrimaryReceiveQueue.Enqueue(e);
                     break;
-                case EnumCmdNum.Cmd43_StatusRequest:
+                case EnumCmdNums.Cmd43_StatusRequest:
                     PrimaryReceiveQueue.Enqueue(e);
                     break;
-                case EnumCmdNum.Cmd51_AvoidRequest:
+                case EnumCmdNums.Cmd51_AvoidRequest:
                     PrimaryReceiveQueue.Enqueue(e);
                     break;
-                case EnumCmdNum.Cmd52_AvoidCompleteResponse:
+                case EnumCmdNums.Cmd52_AvoidCompleteResponse:
                     SecondaryReceiveQueue.Enqueue(e);
                     break;
-                case EnumCmdNum.Cmd91_AlarmResetRequest:
+                case EnumCmdNums.Cmd91_AlarmResetRequest:
                     PrimaryReceiveQueue.Enqueue(e);
                     break;
-                case EnumCmdNum.Cmd94_AlarmResponse:
+                case EnumCmdNums.Cmd94_AlarmResponse:
                     SecondaryReceiveQueue.Enqueue(e);
                     break;
                 default:
                     break;
             }
         }
-        private bool IsApplyOnly(EnumCmdNum cmdNum)
+        private bool IsApplyOnly(EnumCmdNums cmdNum)
         {
             switch (cmdNum)
             {
-                case EnumCmdNum.Cmd35_CarrierIdRenameRequest:
+                case EnumCmdNums.Cmd35_CarrierIdRenameRequest:
                     return true;
-                case EnumCmdNum.Cmd43_StatusRequest:
+                case EnumCmdNums.Cmd43_StatusRequest:
                     return true;
-                case EnumCmdNum.Cmd91_AlarmResetRequest:
+                case EnumCmdNums.Cmd91_AlarmResetRequest:
                     return true;
                 default:
                     break;
@@ -298,9 +285,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                string msg = $"[SEND] [SeqNum = {wrapper.SeqNum}][{wrapper.ID}][{(EnumCmdNum)wrapper.ID}] {wrapper}";
-                OnCmdSendEvent?.Invoke(this, msg);
-                LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+                LogComm(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[SEND] [SeqNum = {wrapper.SeqNum}][{wrapper.ID}][{(EnumCmdNums)wrapper.ID}] {wrapper}");
             }
             catch (Exception ex)
             {
@@ -390,32 +375,32 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                EnumCmdNum cmdNum = (EnumCmdNum)int.Parse(tcpIpEventArgs.iPacketID);
+                EnumCmdNums cmdNum = (EnumCmdNums)int.Parse(tcpIpEventArgs.iPacketID);
 
                 switch (cmdNum)
                 {
-                    case EnumCmdNum.Cmd11_CouplerInfoReport:
+                    case EnumCmdNums.Cmd11_CouplerInfoReport:
                         Receive_Cmd11_CouplerInfoReport(this, tcpIpEventArgs);
                         break;
-                    case EnumCmdNum.Cmd31_TransferRequest:
+                    case EnumCmdNums.Cmd31_TransferRequest:
                         Receive_Cmd31_TransferRequest(this, tcpIpEventArgs);
                         break;
-                    case EnumCmdNum.Cmd35_CarrierIdRenameRequest:
+                    case EnumCmdNums.Cmd35_CarrierIdRenameRequest:
                         Receive_Cmd35_CarrierIdRenameRequest(this, tcpIpEventArgs);
                         break;
-                    case EnumCmdNum.Cmd37_TransferCancelRequest:
+                    case EnumCmdNums.Cmd37_TransferCancelRequest:
                         Receive_Cmd37_TransferCancelRequest(this, tcpIpEventArgs);
                         break;
-                    case EnumCmdNum.Cmd39_PauseRequest:
+                    case EnumCmdNums.Cmd39_PauseRequest:
                         Receive_Cmd39_PauseRequest(this, tcpIpEventArgs);
                         break;
-                    case EnumCmdNum.Cmd43_StatusRequest:
+                    case EnumCmdNums.Cmd43_StatusRequest:
                         Receive_Cmd43_StatusRequest(this, tcpIpEventArgs);
                         break;
-                    case EnumCmdNum.Cmd51_AvoidRequest:
+                    case EnumCmdNums.Cmd51_AvoidRequest:
                         Receive_Cmd51_AvoidRequest(this, tcpIpEventArgs);
                         break;
-                    case EnumCmdNum.Cmd91_AlarmResetRequest:
+                    case EnumCmdNums.Cmd91_AlarmResetRequest:
                         Receive_Cmd91_AlarmResetRequest(this, tcpIpEventArgs);
                         break;
                     default:
@@ -431,17 +416,17 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                EnumCmdNum cmdNum = (EnumCmdNum)int.Parse(tcpIpEventArgs.iPacketID);
+                EnumCmdNums cmdNum = (EnumCmdNums)int.Parse(tcpIpEventArgs.iPacketID);
 
                 switch (cmdNum)
                 {
                     //case EnumCmdNum.Cmd38_GuideInfoResponse:
                     //    Receive_Cmd38_GuideInfoResponse(this, tcpIpEventArgs);
                     //    break;
-                    case EnumCmdNum.Cmd52_AvoidCompleteResponse:
+                    case EnumCmdNums.Cmd52_AvoidCompleteResponse:
                         Receive_Cmd52_AvoidCompleteResponse(this, tcpIpEventArgs);
                         break;
-                    case EnumCmdNum.Cmd94_AlarmResponse:
+                    case EnumCmdNums.Cmd94_AlarmResponse:
                         Receive_Cmd94_AlarmResponse(this, tcpIpEventArgs);
                         break;
                     default:
@@ -453,7 +438,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-        private void SendWrapperToSchedule(WrapperMessage wrapper, bool isReply, bool isSendWait)
+        public void SendWrapperToSchedule(WrapperMessage wrapper, bool isReply, bool isSendWait)
         {
             ScheduleWrapper scheduleWrapper = new ScheduleWrapper(wrapper);
 
@@ -479,7 +464,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 }
             }
         }
-
         private void SendWaitSchedule()
         {
             while (true)
@@ -550,15 +534,16 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                                 if (scheduleWrapper.RetrySendWaitCounter <= 0)
                                 {
-                                    OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
+                                    //OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
                                 }
                                 else
                                 {
                                     scheduleWrapper.RetrySendWaitCounter--;
                                     PrimarySendWaitQueue.Enqueue(scheduleWrapper);
                                     mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"PrimarySendWait : [{scheduleWrapper.Wrapper.ID}][RetrySendWaitCounter={scheduleWrapper.RetrySendWaitCounter}][Back To SendWaitQueue]");
-
                                 }
+
+                                CheckAgvcConnection();
                             }
                         }
                         break;
@@ -574,7 +559,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             {
                                 if (scheduleWrapper.RetrySendWaitCounter <= 0)
                                 {
-                                    OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
+                                    //OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
                                 }
                                 else
                                 {
@@ -596,7 +581,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             {
                                 if (scheduleWrapper.RetrySendWaitCounter <= 0)
                                 {
-                                    OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
+                                    //OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
                                 }
                                 else
                                 {
@@ -614,6 +599,34 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
+        }
+
+        private void CheckAgvcConnection()
+        {
+            try
+            {
+                List<AccessPoint> accessPoints = new Wifi().GetAccessPoints().ToList();
+                if (accessPoints.Any())
+                {
+                    if (accessPoints.FindIndex(accessPoint => accessPoint.IsConnected) == -1)
+                    {
+                        Vehicle.IsAgvcConnect = false;
+                    }
+                    else
+                    {
+                        Vehicle.IsAgvcConnect = ClientAgent.IsConnection;
+                    }
+                }
+                else
+                {
+                    Vehicle.IsAgvcConnect = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+
         }
 
         public void ClearAllReserve()
@@ -710,7 +723,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 else
                 {
                     mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[逾時] AskAllSectionsReserveInOnce send wait timeout[{Vehicle.TransferCommand.CommandId}]");
-                    OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
+                    //OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
                 }
 
                 if (IsSleepByAskReserveFail)
@@ -824,15 +837,13 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             if (queReserveOkSections.IsEmpty)
             {
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"AgvcConnector :queReserveOkSections.Count=[{queReserveOkSections.Count}], Dequeue Got Reserve Ok Sections Fail.");
+                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"AgvcConnector : queReserveOkSections.Count=[{queReserveOkSections.Count}], Dequeue Got Reserve Ok Sections Fail.");
                 return;
             }
             else
             {
                 queReserveOkSections.TryDequeue(out MapSection passSection);
-                string passSectionId = passSection.Id;
-                OnPassReserveSectionEvent?.Invoke(this, passSectionId);
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"AgvcConnector : passSectionId = [{passSectionId}].");
+                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"AgvcConnector : passSectionId = [{passSection.Id}].");
             }
         }
         private void RefreshPartMoveSections()
@@ -885,10 +896,10 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 WrapperMessage wrapper = new WrapperMessage();
 
-                var cmdType = (EnumCmdNum)cmdNum;
+                var cmdType = (EnumCmdNums)cmdNum;
                 switch (cmdType)
                 {
-                    case EnumCmdNum.Cmd31_TransferRequest:
+                    case EnumCmdNums.Cmd31_TransferRequest:
                         {
                             ID_31_TRANS_REQUEST aCmd = new ID_31_TRANS_REQUEST();
                             aCmd.CmdID = pairs["CmdID"];
@@ -899,7 +910,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             wrapper.TransReq = aCmd;
                             break;
                         }
-                    case EnumCmdNum.Cmd32_TransferCompleteResponse:
+                    case EnumCmdNums.Cmd32_TransferCompleteResponse:
                         {
                             ID_32_TRANS_COMPLETE_RESPONSE aCmd = new ID_32_TRANS_COMPLETE_RESPONSE();
                             aCmd.ReplyCode = int.Parse(pairs["ReplyCode"]);
@@ -909,7 +920,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd35_CarrierIdRenameRequest:
+                    case EnumCmdNums.Cmd35_CarrierIdRenameRequest:
                         {
                             ID_35_CST_ID_RENAME_REQUEST aCmd = new ID_35_CST_ID_RENAME_REQUEST();
                             aCmd.NEWCSTID = pairs["NEWCSTID"];
@@ -920,7 +931,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd36_TransferEventResponse:
+                    case EnumCmdNums.Cmd36_TransferEventResponse:
                         {
                             ID_36_TRANS_EVENT_RESPONSE aCmd = new ID_36_TRANS_EVENT_RESPONSE();
                             aCmd.IsBlockPass = PassTypeParse(pairs["IsBlockPass"]);
@@ -932,7 +943,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd37_TransferCancelRequest:
+                    case EnumCmdNums.Cmd37_TransferCancelRequest:
                         {
                             ID_37_TRANS_CANCEL_REQUEST aCmd = new ID_37_TRANS_CANCEL_REQUEST();
                             aCmd.CmdID = pairs["CmdID"];
@@ -942,7 +953,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd39_PauseRequest:
+                    case EnumCmdNums.Cmd39_PauseRequest:
                         {
                             ID_39_PAUSE_REQUEST aCmd = new ID_39_PAUSE_REQUEST();
                             aCmd.EventType = PauseEventParse(pairs["EventType"]);
@@ -953,7 +964,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd41_ModeChange:
+                    case EnumCmdNums.Cmd41_ModeChange:
                         {
                             ID_41_MODE_CHANGE_REQ aCmd = new ID_41_MODE_CHANGE_REQ();
                             aCmd.OperatingVHMode = OperatingVHModeParse(pairs["OperatingVHMode"]);
@@ -963,7 +974,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd43_StatusRequest:
+                    case EnumCmdNums.Cmd43_StatusRequest:
                         {
                             ID_43_STATUS_REQUEST aCmd = new ID_43_STATUS_REQUEST();
 
@@ -972,7 +983,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd44_StatusRequest:
+                    case EnumCmdNums.Cmd44_StatusRequest:
                         {
                             ID_44_STATUS_CHANGE_RESPONSE aCmd = new ID_44_STATUS_CHANGE_RESPONSE();
                             aCmd.ReplyCode = int.Parse(pairs["ReplyCode"]);
@@ -982,7 +993,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd45_PowerOnoffRequest:
+                    case EnumCmdNums.Cmd45_PowerOnoffRequest:
                         {
                             ID_45_POWER_OPE_REQ aCmd = new ID_45_POWER_OPE_REQ();
                             aCmd.OperatingPowerMode = OperatingPowerModeParse(pairs["OperatingPowerMode"]);
@@ -992,7 +1003,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd51_AvoidRequest:
+                    case EnumCmdNums.Cmd51_AvoidRequest:
                         {
                             ID_51_AVOID_REQUEST aCmd = new ID_51_AVOID_REQUEST();
                             aCmd.GuideAddresses.AddRange(StringSpilter(pairs["GuideAddresses"]));
@@ -1003,7 +1014,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd52_AvoidCompleteResponse:
+                    case EnumCmdNums.Cmd52_AvoidCompleteResponse:
                         {
                             ID_52_AVOID_COMPLETE_RESPONSE aCmd = new ID_52_AVOID_COMPLETE_RESPONSE();
                             aCmd.ReplyCode = int.Parse(pairs["ReplyCode"]);
@@ -1013,7 +1024,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd71_RangeTeachRequest:
+                    case EnumCmdNums.Cmd71_RangeTeachRequest:
                         {
                             ID_71_RANGE_TEACHING_REQUEST aCmd = new ID_71_RANGE_TEACHING_REQUEST();
                             aCmd.FromAdr = pairs["FromAdr"];
@@ -1024,7 +1035,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd72_RangeTeachCompleteResponse:
+                    case EnumCmdNums.Cmd72_RangeTeachCompleteResponse:
                         {
                             ID_72_RANGE_TEACHING_COMPLETE_RESPONSE aCmd = new ID_72_RANGE_TEACHING_COMPLETE_RESPONSE();
                             aCmd.ReplyCode = int.Parse(pairs["ReplyCode"]);
@@ -1034,7 +1045,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd74_AddressTeachResponse:
+                    case EnumCmdNums.Cmd74_AddressTeachResponse:
                         {
                             ID_74_ADDRESS_TEACH_RESPONSE aCmd = new ID_74_ADDRESS_TEACH_RESPONSE();
                             aCmd.ReplyCode = int.Parse(pairs["ReplyCode"]);
@@ -1044,7 +1055,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd91_AlarmResetRequest:
+                    case EnumCmdNums.Cmd91_AlarmResetRequest:
                         {
                             ID_91_ALARM_RESET_REQUEST aCmd = new ID_91_ALARM_RESET_REQUEST();
 
@@ -1053,14 +1064,14 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd94_AlarmResponse:
+                    case EnumCmdNums.Cmd94_AlarmResponse:
                         {
                             ID_94_ALARM_RESPONSE aCmd = new ID_94_ALARM_RESPONSE();
                             aCmd.ReplyCode = int.Parse(pairs["ReplyCode"]);
 
                             break;
                         }
-                    case EnumCmdNum.Cmd131_TransferResponse:
+                    case EnumCmdNums.Cmd131_TransferResponse:
                         {
                             ID_131_TRANS_RESPONSE aCmd = new ID_131_TRANS_RESPONSE();
                             aCmd.CmdID = pairs["CmdID"];
@@ -1072,7 +1083,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd132_TransferCompleteReport:
+                    case EnumCmdNums.Cmd132_TransferCompleteReport:
                         {
                             ID_132_TRANS_COMPLETE_REPORT aCmd = new ID_132_TRANS_COMPLETE_REPORT();
                             aCmd.CmdID = pairs["CmdID"];
@@ -1088,7 +1099,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd134_TransferEventReport:
+                    case EnumCmdNums.Cmd134_TransferEventReport:
                         {
                             ID_134_TRANS_EVENT_REP aCmd = new ID_134_TRANS_EVENT_REP();
                             aCmd.CurrentAdrID = pairs["CurrentAdrID"];
@@ -1101,7 +1112,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd135_CarrierIdRenameResponse:
+                    case EnumCmdNums.Cmd135_CarrierIdRenameResponse:
                         {
                             ID_135_CST_ID_RENAME_RESPONSE aCmd = new ID_135_CST_ID_RENAME_RESPONSE();
                             aCmd.ReplyCode = int.Parse(pairs["ReplyCode"]);
@@ -1111,7 +1122,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd136_TransferEventReport:
+                    case EnumCmdNums.Cmd136_TransferEventReport:
                         {
                             ID_136_TRANS_EVENT_REP aCmd = new ID_136_TRANS_EVENT_REP();
                             aCmd.CSTID = pairs["CSTID"];
@@ -1124,7 +1135,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd137_TransferCancelResponse:
+                    case EnumCmdNums.Cmd137_TransferCancelResponse:
                         {
                             ID_137_TRANS_CANCEL_RESPONSE aCmd = new ID_137_TRANS_CANCEL_RESPONSE();
                             aCmd.CmdID = pairs["CmdID"];
@@ -1135,7 +1146,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd139_PauseResponse:
+                    case EnumCmdNums.Cmd139_PauseResponse:
                         {
                             ID_139_PAUSE_RESPONSE aCmd = new ID_139_PAUSE_RESPONSE();
                             aCmd.EventType = PauseEventParse(pairs["EventType"]);
@@ -1146,7 +1157,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd141_ModeChangeResponse:
+                    case EnumCmdNums.Cmd141_ModeChangeResponse:
                         {
                             ID_141_MODE_CHANGE_RESPONSE aCmd = new ID_141_MODE_CHANGE_RESPONSE();
                             aCmd.ReplyCode = int.Parse(pairs["ReplyCode"]);
@@ -1156,7 +1167,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd143_StatusResponse:
+                    case EnumCmdNums.Cmd143_StatusResponse:
                         {
                             //TODO: 補完屬性
                             ID_143_STATUS_RESPONSE aCmd = new ID_143_STATUS_RESPONSE();
@@ -1172,7 +1183,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd144_StatusReport:
+                    case EnumCmdNums.Cmd144_StatusReport:
                         {
                             //TODO: 補完屬性
                             ID_144_STATUS_CHANGE_REP aCmd = new ID_144_STATUS_CHANGE_REP();
@@ -1187,7 +1198,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd151_AvoidResponse:
+                    case EnumCmdNums.Cmd151_AvoidResponse:
                         {
                             ID_151_AVOID_RESPONSE aCmd = new ID_151_AVOID_RESPONSE();
                             aCmd.NgReason = pairs["NgReason"];
@@ -1198,7 +1209,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd152_AvoidCompleteReport:
+                    case EnumCmdNums.Cmd152_AvoidCompleteReport:
                         {
                             ID_152_AVOID_COMPLETE_REPORT aCmd = new ID_152_AVOID_COMPLETE_REPORT();
                             aCmd.CmpStatus = int.Parse(pairs["CmpStatus"]);
@@ -1208,7 +1219,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd171_RangeTeachResponse:
+                    case EnumCmdNums.Cmd171_RangeTeachResponse:
                         {
                             ID_171_RANGE_TEACHING_RESPONSE aCmd = new ID_171_RANGE_TEACHING_RESPONSE();
                             aCmd.ReplyCode = int.Parse(pairs["ReplyCode"]);
@@ -1218,7 +1229,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd172_RangeTeachCompleteReport:
+                    case EnumCmdNums.Cmd172_RangeTeachCompleteReport:
                         {
                             ID_172_RANGE_TEACHING_COMPLETE_REPORT aCmd = new ID_172_RANGE_TEACHING_COMPLETE_REPORT();
                             aCmd.CompleteCode = int.Parse(pairs["CompleteCode"]);
@@ -1231,7 +1242,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd174_AddressTeachReport:
+                    case EnumCmdNums.Cmd174_AddressTeachReport:
                         {
                             ID_174_ADDRESS_TEACH_REPORT aCmd = new ID_174_ADDRESS_TEACH_REPORT();
                             aCmd.Addr = pairs["Addr"];
@@ -1242,7 +1253,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd191_AlarmResetResponse:
+                    case EnumCmdNums.Cmd191_AlarmResetResponse:
                         {
                             ID_191_ALARM_RESET_RESPONSE aCmd = new ID_191_ALARM_RESET_RESPONSE();
                             aCmd.ReplyCode = int.Parse(pairs["ReplyCode"]);
@@ -1252,7 +1263,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd194_AlarmReport:
+                    case EnumCmdNums.Cmd194_AlarmReport:
                         {
                             ID_194_ALARM_REPORT aCmd = new ID_194_ALARM_REPORT();
                             aCmd.ErrCode = pairs["ErrCode"];
@@ -1264,7 +1275,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             break;
                         }
-                    case EnumCmdNum.Cmd000_EmptyCommand:
+                    case EnumCmdNums.Cmd000_EmptyCommand:
                     default:
                         {
                             ID_1_HOST_BASIC_INFO_VERSION_REP aCmd = new ID_1_HOST_BASIC_INFO_VERSION_REP();
@@ -1546,37 +1557,24 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 if (IsCheckingReserveOkSections)
                 {
-                    Send_Cmd151_AvoidResponse(e.iSeqNum, 1, "Vehicle is checking reserve-Ok sections, can not do avoid request.");
+                    Send_Cmd151_AvoidResponse(e.iSeqNum, (int)EnumAgvcReplyCode.Reject, "Vehicle is checking reserve-Ok sections, can not do avoid request.");
                     return;
                 }
                 ID_51_AVOID_REQUEST receive = (ID_51_AVOID_REQUEST)e.objPacket;
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $" Get Avoid Command");
-                AseMovingGuide aseMovingGuide = new AseMovingGuide(receive, e.iSeqNum);
-                ShowAvoidRequestToForm(aseMovingGuide);
-                OnAvoideRequestEvent?.Invoke(this, aseMovingGuide);
+                ShowAvoidRequestToForm(receive);
+                OnAvoideRequestEvent?.Invoke(this, new AseMovingGuide(receive, e.iSeqNum));
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-        private void ShowAvoidRequestToForm(AseMovingGuide aseMovingGuide)
+        private void ShowAvoidRequestToForm(ID_51_AVOID_REQUEST receive)
         {
             try
             {
-                var msg = $" Get Avoid Command ,Avoid End Adr={aseMovingGuide.ToAddressId}.";
-
-                msg += Environment.NewLine + "Avoid Section ID:";
-                foreach (var secId in aseMovingGuide.GuideSectionIds)
-                {
-                    msg += $"({secId})";
-                }
-                msg += Environment.NewLine + "Avoid Address ID:";
-                foreach (var adrId in aseMovingGuide.GuideAddressIds)
-                {
-                    msg += $"({adrId})";
-                }
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name,
+                    $"[收到.避車.命令] Get Avoid Command, Avoid End Adr={receive.DestinationAdr}.\r\n [Sections ={receive.GuideSections.GetJsonInfo()}] \r\n [Address={receive.GuideAddresses.GetJsonInfo()}]");
             }
             catch (Exception ex)
             {
@@ -2007,7 +2005,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
             catch (Exception ex)
             {
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name,$"[收到.命令.取消.失敗] {ex.Message}");
+                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[收到.命令.取消.失敗] {ex.Message}");
 
                 Send_Cmd137_TransferCancelResponse(e.iSeqNum, (int)EnumAgvcReplyCode.Reject, receive);
             }
@@ -2098,7 +2096,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         {
                             if (string.IsNullOrEmpty(response.CmdID.Trim()))
                             {
-                                OnMessageShowOnMainFormEvent?.Invoke(this, $"[上報 儲位狀態 成功] Report Cst ID Read Reply Ok.");
+                                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[上報.儲位狀態.成功] Report Cst ID Read Reply Ok.");
 
                                 if (!string.IsNullOrEmpty(response.RenameCarrierID))
                                 {
@@ -2123,7 +2121,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             {
                                 if (response.ReplyAction != ReplyActionType.Continue)
                                 {
-                                    mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨失敗 放棄命令] Load fail, [ReplyAction = {response.ReplyAction}][RenameCarrierID = {response.RenameCarrierID}]");
+                                    mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨失敗.放棄命令] Load fail, [ReplyAction = {response.ReplyAction}][RenameCarrierID = {response.RenameCarrierID}]");
 
                                     mainFlowHandler.ResetAllAlarmsFromAgvm();
                                     if (Vehicle.mapTransferCommands.ContainsKey(report.CmdID))
@@ -2153,7 +2151,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 }
                                 else
                                 {
-                                    mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨階段 CST ID 上報 完成] Load Complete and BcrReadReplyOk");
+                                    mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨階段.BcrRead.上報.完成] Load Complete and BcrReadReplyOk");
                                     if (Vehicle.mapTransferCommands.ContainsKey(report.CmdID))
                                     {
                                         var cmd = Vehicle.mapTransferCommands[report.CmdID];
@@ -2180,7 +2178,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                         }
                         break;
                     case EventType.Cstremove:
-                        OnMessageShowOnMainFormEvent?.Invoke(this, $"SendRecv_Cmd136_CstRemove, AGVC reply OK.");
+                        mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"SendRecv_Cmd136_CstRemove, AGVC reply OK.");
                         break;
                     default:
                         break;
@@ -2851,6 +2849,26 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         #region Log
 
+        public void AppendCommLog(string msg)
+        {
+            try
+            {
+                lock (CommLogMsg)
+                {
+                    CommLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", CommLogMsg);
+
+                    if (CommLogMsg.Length > 65535)
+                    {
+                        CommLogMsg = CommLogMsg.Substring(65535);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
         private void LogException(string classMethodName, string exMsg)
         {
             try
@@ -2860,18 +2878,10 @@ namespace Mirle.Agv.AseMiddler.Controller
             catch (Exception) { }
         }
 
-        private void LogDebug(string classMethodName, string msg)
-        {
-            try
-            {
-                mirleLogger.Log(new LogFormat("Debug", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
-            }
-            catch (Exception) { }
-        }
-
         private void LogComm(string classMethodName, string msg)
         {
             mirleLogger.Log(new LogFormat("Comm", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
+            AppendCommLog(msg);
         }
 
         public void LogCommandList(string msg)

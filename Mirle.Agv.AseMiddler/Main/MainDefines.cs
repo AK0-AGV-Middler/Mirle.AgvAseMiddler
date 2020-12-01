@@ -71,7 +71,7 @@ namespace Mirle.Agv.AseMiddler
         OneAboveAll
     }
 
-    public enum EnumCmdNum
+    public enum EnumCmdNums
     {
         Cmd000_EmptyCommand = 0,
         Cmd11_CouplerInfoReport = 11,
@@ -101,6 +101,7 @@ namespace Mirle.Agv.AseMiddler
         Cmd135_CarrierIdRenameResponse = 135,
         Cmd136_TransferEventReport = 136,
         Cmd137_TransferCancelResponse = 137,
+        Cmd138_GuideInfoRequest = 138,
         Cmd139_PauseResponse = 139,
         Cmd141_ModeChangeResponse = 141,
         Cmd143_StatusResponse = 143,
@@ -281,4 +282,12 @@ namespace Mirle.Agv.AseMiddler
     }
 
     #endregion    
+
+    public static class ExtensionMethods
+    {
+        public static string GetJsonInfo(this object obj)
+        {
+            return Newtonsoft.Json.JsonConvert.SerializeObject(obj, Newtonsoft.Json.Formatting.Indented);
+        }
+    }
 }

@@ -1,31 +1,25 @@
-﻿using Google.Protobuf.Collections;
+﻿using com.mirle.aka.sc.ProtocolFormat.ase.agvMessage;
+using Google.Protobuf.Collections;
 using Mirle.Agv.AseMiddler.Controller;
-
-using Mirle.Agv.AseMiddler.Model.Configs;
+using Mirle.Agv.AseMiddler.Model;
+using Mirle.Tools;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
-using com.mirle.aka.sc.ProtocolFormat.ase.agvMessage;
-using System.Threading.Tasks;
-using Mirle.Tools;
-using Mirle.Agv.AseMiddler.Model;
 
 namespace Mirle.Agv.AseMiddler.View
 {
     public partial class AgvcConnectorForm : Form
     {
         private AgvcConnector agvcConnector;
-        private string CommLogMsg { get; set; } = "";
         public Vehicle Vehicle { get; set; } = Vehicle.Instance;
 
         public AgvcConnectorForm(AgvcConnector agvcConnector)
         {
             InitializeComponent();
             this.agvcConnector = agvcConnector;
-            EventInital();
         }
 
         private void CommunicationForm_Load(object sender, EventArgs e)
@@ -44,341 +38,226 @@ namespace Mirle.Agv.AseMiddler.View
         {
             txtRemoteIp.Text = Vehicle.AgvcConnectorConfig.RemoteIp;
             txtRemotePort.Text = Vehicle.AgvcConnectorConfig.RemotePort.ToString();
-        }
 
-        private void EventInital()
-        {
-            agvcConnector.OnCmdReceiveEvent += SendOrReceiveCmdToTextBox;
-            agvcConnector.OnCmdSendEvent += SendOrReceiveCmdToTextBox;
-        }
-
-        public void SendOrReceiveCmdToTextBox(object sender, string msg)
-        {
-            try
-            {
-                AppendCommLogMsg(msg);
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
-        }
-
-        private void AppendCommLogMsg(string msg)
-        {
-            try
-            {
-                CommLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", msg, "\r\n", CommLogMsg);
-
-                if (CommLogMsg.Length > 65535)
-                {
-                    CommLogMsg = CommLogMsg.Substring(65535);
-                }
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
+            boxAgvCmdNums.DataSource = Enum.GetValues(typeof(EnumCmdNums));
+            boxAgvCmdNums.SelectedItem = EnumCmdNums.Cmd31_TransferRequest;
         }
 
         private void btnSend_Click(object sender, EventArgs e)
         {
-            int numOfCmdItems = dataGridView1.Rows.Count - 1;
-            if (numOfCmdItems < 0)
-            {
-                return;
-            }
-            int cmdNum = int.Parse(cbSend.Text.Split('_')[0].Substring(3));
-            Dictionary<string, string> pairs = new Dictionary<string, string>();
-            string msg = $"[{cbSend.Text}] ";
-            for (int i = 0; i < numOfCmdItems; i++)
-            {
-                var row = dataGridView1.Rows[i];
-                msg = string.Concat(msg, $"[{row.Cells[0].Value},{row.Cells[1].Value}]");
-                if (!string.IsNullOrEmpty(row.Cells[0].Value.ToString()))
-                {
-                    pairs[row.Cells[0].Value.ToString()] = row.Cells[1].Value.ToString();
-                }
-            }
-            AppendCommLogMsg(msg);
+            WrapperMessage wrapper = new WrapperMessage();
+            EnumCmdNums cmdNum = (EnumCmdNums)boxAgvCmdNums.SelectedItem;
 
-            agvcConnector.SendAgvcConnectorFormCommands(cmdNum, pairs);
+            switch (cmdNum)
+            {
+                case EnumCmdNums.Cmd11_CouplerInfoReport:
+                    break;
+                case EnumCmdNums.Cmd31_TransferRequest:
+                    break;
+                case EnumCmdNums.Cmd32_TransferCompleteResponse:
+                    break;
+                case EnumCmdNums.Cmd35_CarrierIdRenameRequest:
+                    break;
+                case EnumCmdNums.Cmd36_TransferEventResponse:
+                    break;
+                case EnumCmdNums.Cmd37_TransferCancelRequest:
+                    break;
+                case EnumCmdNums.Cmd38_GuideInfoResponse:
+                    break;
+                case EnumCmdNums.Cmd39_PauseRequest:
+                    break;
+                case EnumCmdNums.Cmd41_ModeChange:
+                    break;
+                case EnumCmdNums.Cmd43_StatusRequest:
+                    break;
+                case EnumCmdNums.Cmd45_PowerOnoffRequest:
+                    break;
+                case EnumCmdNums.Cmd51_AvoidRequest:
+                    break;
+                case EnumCmdNums.Cmd52_AvoidCompleteResponse:
+                    break;
+                case EnumCmdNums.Cmd91_AlarmResetRequest:
+                    break;
+                case EnumCmdNums.Cmd94_AlarmResponse:
+                    break;
+                case EnumCmdNums.Cmd131_TransferResponse:
+                    break;
+                case EnumCmdNums.Cmd132_TransferCompleteReport:
+                    {
+                        var cmdInfo = JsonConvert.DeserializeObject<ID_132_TRANS_COMPLETE_REPORT>(txtAgvCommandInfo.Text);
+
+                        wrapper.ID = WrapperMessage.TranCmpRepFieldNumber;
+                        wrapper.TranCmpRep = cmdInfo;
+                    }
+                    break;
+                case EnumCmdNums.Cmd134_TransferEventReport:
+                    {
+                        var cmdInfo = JsonConvert.DeserializeObject<ID_134_TRANS_EVENT_REP>(txtAgvCommandInfo.Text);
+
+                        wrapper.ID = WrapperMessage.TransEventRepFieldNumber;
+                        wrapper.TransEventRep = cmdInfo;
+                    }
+                    break;
+                case EnumCmdNums.Cmd135_CarrierIdRenameResponse:
+                    break;
+                case EnumCmdNums.Cmd136_TransferEventReport:
+                    {
+                        var cmdInfo = JsonConvert.DeserializeObject<ID_136_TRANS_EVENT_REP>(txtAgvCommandInfo.Text);
+
+                        wrapper.ID = WrapperMessage.ImpTransEventRepFieldNumber;
+                        wrapper.ImpTransEventRep = cmdInfo;
+                    }
+                    break;
+                case EnumCmdNums.Cmd137_TransferCancelResponse:
+                    break;
+                case EnumCmdNums.Cmd138_GuideInfoRequest:
+                    {
+                        var cmdInfo = JsonConvert.DeserializeObject<ID_138_GUIDE_INFO_REQUEST>(txtAgvCommandInfo.Text);
+
+                        wrapper.ID = WrapperMessage.GuideInfoReqFieldNumber;
+                        wrapper.GuideInfoReq = cmdInfo;
+                    }
+                    break;
+                case EnumCmdNums.Cmd139_PauseResponse:
+                    break;
+                case EnumCmdNums.Cmd141_ModeChangeResponse:
+                    break;
+                case EnumCmdNums.Cmd143_StatusResponse:
+                    break;
+                case EnumCmdNums.Cmd144_StatusReport:
+                    {
+                        var cmdInfo = JsonConvert.DeserializeObject<ID_144_STATUS_CHANGE_REP>(txtAgvCommandInfo.Text);
+
+                        wrapper.ID = WrapperMessage.StatueChangeRepFieldNumber;
+                        wrapper.StatueChangeRep = cmdInfo;
+                    }
+                    break;
+                case EnumCmdNums.Cmd145_PowerOnoffResponse:
+                    break;
+                case EnumCmdNums.Cmd151_AvoidResponse:
+                    break;
+                case EnumCmdNums.Cmd152_AvoidCompleteReport:
+                    {
+                        var cmdInfo = JsonConvert.DeserializeObject<ID_144_STATUS_CHANGE_REP>(txtAgvCommandInfo.Text);
+
+                        wrapper.ID = WrapperMessage.StatueChangeRepFieldNumber;
+                        wrapper.StatueChangeRep = cmdInfo;
+                    }
+                    break;
+                case EnumCmdNums.Cmd191_AlarmResetResponse:
+                    {
+                        var cmdInfo = JsonConvert.DeserializeObject<ID_191_ALARM_RESET_RESPONSE>(txtAgvCommandInfo.Text);
+
+                        wrapper.ID = WrapperMessage.AlarmResetRespFieldNumber;
+                        wrapper.AlarmResetResp = cmdInfo;
+                    }
+                    break;
+                case EnumCmdNums.Cmd194_AlarmReport:
+                    {
+                        var cmdInfo = JsonConvert.DeserializeObject<ID_194_ALARM_REPORT>(txtAgvCommandInfo.Text);
+
+                        wrapper.ID = WrapperMessage.AlarmRepFieldNumber;
+                        wrapper.AlarmRep = cmdInfo;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            agvcConnector.SendWrapperToSchedule(wrapper, false, false);
         }
 
         private void cbSend_SelectedValueChanged(object sender, EventArgs e)
         {
-            string selectCmd = cbSend.Text.Split('_')[0].Substring(3);
-            int selectCmdNum = int.Parse(selectCmd);
-            SetDataGridViewFromCmdNum(selectCmdNum);
+            txtAgvCommandInfo.Text = GetCommandPropertiesFromCommandNumber((EnumCmdNums)boxAgvCmdNums.SelectedItem);
         }
-
-        private void SetDataGridViewFromCmdNum(int selectCmdNum)
+        private string GetCommandPropertiesFromCommandNumber(EnumCmdNums cmdNums)
         {
-
-            PropertyInfo[] infos;
-            var cmdType = (EnumCmdNum)selectCmdNum;
-
-            switch (cmdType)
+            switch (cmdNums)
             {
-                case EnumCmdNum.Cmd000_EmptyCommand:
-                    ID_2_BASIC_INFO_VERSION_RESPONSE cmd002 = new ID_2_BASIC_INFO_VERSION_RESPONSE();
-                    infos = cmd002.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd002);
+                case EnumCmdNums.Cmd000_EmptyCommand:
                     break;
-                case EnumCmdNum.Cmd31_TransferRequest:
-                    ID_31_TRANS_REQUEST cmd31 = new ID_31_TRANS_REQUEST();
-                    cmd31.CmdID = "Cmd001";
-                    cmd31.CSTID = "Cst001";
-                    cmd31.DestinationAdr = "Adr001";
-                    cmd31.LoadAdr = "Adr002";
-                    infos = cmd31.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd31);
-                    break;
-                case EnumCmdNum.Cmd32_TransferCompleteResponse:
-                    ID_32_TRANS_COMPLETE_RESPONSE cmd32 = new ID_32_TRANS_COMPLETE_RESPONSE();
-                    cmd32.ReplyCode = 0;
-                    infos = cmd32.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd32);
-                    break;
-                case EnumCmdNum.Cmd35_CarrierIdRenameRequest:
-                    ID_35_CST_ID_RENAME_REQUEST cmd35 = new ID_35_CST_ID_RENAME_REQUEST();
-                    cmd35.OLDCSTID = "Cst001";
-                    cmd35.NEWCSTID = "Cst002";
-                    infos = cmd35.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd35);
-                    break;
-                case EnumCmdNum.Cmd36_TransferEventResponse:
-                    ID_36_TRANS_EVENT_RESPONSE cmd36 = new ID_36_TRANS_EVENT_RESPONSE();
-                    cmd36.IsBlockPass = PassType.Pass;
-                    cmd36.IsReserveSuccess = ReserveResult.Success;
-                    cmd36.ReplyCode = 0;
-                    infos = cmd36.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd36);
-                    break;
-                case EnumCmdNum.Cmd37_TransferCancelRequest:
-                    ID_37_TRANS_CANCEL_REQUEST cmd37 = new ID_37_TRANS_CANCEL_REQUEST();
-                    cmd37.CmdID = "Cmd001";
-                    infos = cmd37.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd37);
-                    break;
-                case EnumCmdNum.Cmd39_PauseRequest:
-                    ID_39_PAUSE_REQUEST cmd39 = new ID_39_PAUSE_REQUEST();
-                    cmd39.EventType = PauseEvent.Continue;
-                    cmd39.PauseType = PauseType.None;
-                    infos = cmd39.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd39);
-                    break;
-                case EnumCmdNum.Cmd41_ModeChange:
-                    ID_41_MODE_CHANGE_REQ cmd41 = new ID_41_MODE_CHANGE_REQ();
-                    cmd41.OperatingVHMode = OperatingVHMode.OperatingAuto;
-                    infos = cmd41.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd41);
-                    break;
-                case EnumCmdNum.Cmd43_StatusRequest:
-                    ID_43_STATUS_REQUEST cmd43 = new ID_43_STATUS_REQUEST();
-                    infos = cmd43.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd43);
-                    break;
-                case EnumCmdNum.Cmd44_StatusRequest:
-                    ID_44_STATUS_CHANGE_RESPONSE cmd44 = new ID_44_STATUS_CHANGE_RESPONSE();
-                    cmd44.ReplyCode = 0;
-                    infos = cmd44.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd44);
-                    break;
-                case EnumCmdNum.Cmd45_PowerOnoffRequest:
-                    ID_45_POWER_OPE_REQ cmd45 = new ID_45_POWER_OPE_REQ();
-                    cmd45.OperatingPowerMode = OperatingPowerMode.OperatingPowerOn;
-                    infos = cmd45.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd45);
-                    break;
-                case EnumCmdNum.Cmd51_AvoidRequest:
-                    ID_51_AVOID_REQUEST cmd51 = new ID_51_AVOID_REQUEST();
-                    infos = cmd51.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd51);
-                    break;
-                case EnumCmdNum.Cmd52_AvoidCompleteResponse:
-                    ID_52_AVOID_COMPLETE_RESPONSE cmd52 = new ID_52_AVOID_COMPLETE_RESPONSE();
-                    cmd52.ReplyCode = 0;
-                    infos = cmd52.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd52);
-                    break;
-                case EnumCmdNum.Cmd71_RangeTeachRequest:
-                    ID_71_RANGE_TEACHING_REQUEST cmd71 = new ID_71_RANGE_TEACHING_REQUEST();
-                    cmd71.FromAdr = "Adr001";
-                    cmd71.ToAdr = "Adr002";
-                    infos = cmd71.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd71);
-                    break;
-                case EnumCmdNum.Cmd72_RangeTeachCompleteResponse:
-                    ID_72_RANGE_TEACHING_COMPLETE_RESPONSE cmd72 = new ID_72_RANGE_TEACHING_COMPLETE_RESPONSE();
-                    cmd72.ReplyCode = 0;
-                    infos = cmd72.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd72);
-                    break;
-                case EnumCmdNum.Cmd74_AddressTeachResponse:
-                    ID_74_ADDRESS_TEACH_RESPONSE cmd74 = new ID_74_ADDRESS_TEACH_RESPONSE();
-                    cmd74.ReplyCode = 0;
-                    infos = cmd74.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd74);
-                    break;
-                case EnumCmdNum.Cmd91_AlarmResetRequest:
-                    ID_91_ALARM_RESET_REQUEST cmd91 = new ID_91_ALARM_RESET_REQUEST();
-                    infos = cmd91.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd91);
-                    break;
-                case EnumCmdNum.Cmd94_AlarmResponse:
-                    ID_94_ALARM_RESPONSE cmd94 = new ID_94_ALARM_RESPONSE();
-                    cmd94.ReplyCode = 0;
-                    infos = cmd94.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd94);
-                    break;
-                case EnumCmdNum.Cmd131_TransferResponse:
-                    ID_131_TRANS_RESPONSE cmd131 = new ID_131_TRANS_RESPONSE();
-                    cmd131.CmdID = "Cmd001";
-                    cmd131.NgReason = "";
-                    cmd131.ReplyCode = 0;
-                    infos = cmd131.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd131);
-                    break;
-                case EnumCmdNum.Cmd132_TransferCompleteReport:
-                    ID_132_TRANS_COMPLETE_REPORT cmd132 = new ID_132_TRANS_COMPLETE_REPORT();
-                    cmd132.CmdID = "Cmd001";
-                    infos = cmd132.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd132);
-                    break;
-                case EnumCmdNum.Cmd134_TransferEventReport:
-                    ID_134_TRANS_EVENT_REP cmd134 = new ID_134_TRANS_EVENT_REP();
-                    cmd134.CurrentAdrID = "Adr001";
-                    cmd134.CurrentSecID = "Sec001";
-                    cmd134.DrivingDirection = DriveDirction.DriveDirForward;
-                    cmd134.EventType = EventType.AdrPass;
-                    cmd134.SecDistance = 12345;
-                    infos = cmd134.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd134);
-                    break;
-                case EnumCmdNum.Cmd135_CarrierIdRenameResponse:
-                    ID_135_CST_ID_RENAME_RESPONSE cmd135 = new ID_135_CST_ID_RENAME_RESPONSE();
-                    cmd135.ReplyCode = 0;
-                    infos = cmd135.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd135);
-                    break;
-                case EnumCmdNum.Cmd136_TransferEventReport:
-                    ID_136_TRANS_EVENT_REP cmd136 = new ID_136_TRANS_EVENT_REP();
-                    cmd136.CSTID = "Cst001";
-                    cmd136.CurrentAdrID = "Adr001";
-                    cmd136.CurrentSecID = "Sec001";
-                    cmd136.EventType = EventType.AdrPass;
-                    infos = cmd136.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd136);
-                    break;
-                case EnumCmdNum.Cmd137_TransferCancelResponse:
-                    ID_137_TRANS_CANCEL_RESPONSE cmd137 = new ID_137_TRANS_CANCEL_RESPONSE();
-                    cmd137.ReplyCode = 0;
-                    infos = cmd137.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd137);
-                    break;
-                case EnumCmdNum.Cmd139_PauseResponse:
-                    ID_139_PAUSE_RESPONSE cmd139 = new ID_139_PAUSE_RESPONSE();
-                    cmd139.ReplyCode = 0;
-                    infos = cmd139.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd139);
-                    break;
-                case EnumCmdNum.Cmd141_ModeChangeResponse:
-                    ID_141_MODE_CHANGE_RESPONSE cmd141 = new ID_141_MODE_CHANGE_RESPONSE();
-                    cmd141.ReplyCode = 0;
-                    infos = cmd141.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd141);
-                    break;
-                case EnumCmdNum.Cmd145_PowerOnoffResponse:
-                    ID_145_POWER_OPE_RESPONSE cmd145 = new ID_145_POWER_OPE_RESPONSE();
-                    cmd145.ReplyCode = 0;
-                    infos = cmd145.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd145);
-                    break;
-                case EnumCmdNum.Cmd151_AvoidResponse:
-                    ID_151_AVOID_RESPONSE cmd151 = new ID_151_AVOID_RESPONSE();
-                    cmd151.ReplyCode = 0;
-                    infos = cmd151.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd151);
-                    break;
-                case EnumCmdNum.Cmd152_AvoidCompleteReport:
-                    ID_152_AVOID_COMPLETE_REPORT cmd152 = new ID_152_AVOID_COMPLETE_REPORT();
-                    cmd152.CmpStatus = 0;
-                    infos = cmd152.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd152);
-                    break;
-                case EnumCmdNum.Cmd171_RangeTeachResponse:
-                    ID_171_RANGE_TEACHING_RESPONSE cmd171 = new ID_171_RANGE_TEACHING_RESPONSE();
-                    cmd171.ReplyCode = 0;
-                    infos = cmd171.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd171);
-                    break;
-                case EnumCmdNum.Cmd172_RangeTeachCompleteReport:
-                    ID_172_RANGE_TEACHING_COMPLETE_REPORT cmd172 = new ID_172_RANGE_TEACHING_COMPLETE_REPORT();
-                    cmd172.CompleteCode = 0;
-                    infos = cmd172.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd172);
-                    break;
-                case EnumCmdNum.Cmd174_AddressTeachReport:
-                    ID_174_ADDRESS_TEACH_REPORT cmd174 = new ID_174_ADDRESS_TEACH_REPORT();
-                    cmd174.Addr = "Adr001";
-                    infos = cmd174.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd174);
-                    break;
-                case EnumCmdNum.Cmd191_AlarmResetResponse:
-                    ID_191_ALARM_RESET_RESPONSE cmd191 = new ID_191_ALARM_RESET_RESPONSE();
-                    cmd191.ReplyCode = 0;
-                    infos = cmd191.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd191);
-                    break;
-                case EnumCmdNum.Cmd194_AlarmReport:
+                case EnumCmdNums.Cmd11_CouplerInfoReport:
+                    var cmd = new ID_11_COUPLER_INFO_REP();
+                    cmd.CouplerInfos.Add(new CouplerInfo() { AddressID = "10004", CouplerStatus = CouplerStatus.Disable });
+                    cmd.CouplerInfos.Add(new CouplerInfo() { AddressID = "10002", CouplerStatus = CouplerStatus.Enable });
+                    return JsonConvert.SerializeObject(cmd, Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd31_TransferRequest:
+                    return JsonConvert.SerializeObject(new ID_31_TRANS_REQUEST(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd32_TransferCompleteResponse:
+                    return JsonConvert.SerializeObject(new ID_32_TRANS_COMPLETE_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd35_CarrierIdRenameRequest:
+                    return JsonConvert.SerializeObject(new ID_35_CST_ID_RENAME_REQUEST(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd36_TransferEventResponse:
+                    return JsonConvert.SerializeObject(new ID_36_TRANS_EVENT_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd37_TransferCancelRequest:
+                    return JsonConvert.SerializeObject(new ID_37_TRANS_CANCEL_REQUEST(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd38_GuideInfoResponse:
+                    return JsonConvert.SerializeObject(new ID_38_GUIDE_INFO_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd39_PauseRequest:
+                    return JsonConvert.SerializeObject(new ID_39_PAUSE_REQUEST(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd41_ModeChange:
+                    return JsonConvert.SerializeObject(new ID_41_MODE_CHANGE_REQ(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd43_StatusRequest:
+                    return JsonConvert.SerializeObject(new ID_43_STATUS_REQUEST(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd44_StatusRequest:
+                    return JsonConvert.SerializeObject(new ID_44_STATUS_CHANGE_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd45_PowerOnoffRequest:
+                    return JsonConvert.SerializeObject(new ID_45_POWER_OPE_REQ(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd51_AvoidRequest:
+                    return JsonConvert.SerializeObject(new ID_51_AVOID_REQUEST(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd52_AvoidCompleteResponse:
+                    return JsonConvert.SerializeObject(new ID_52_AVOID_COMPLETE_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd91_AlarmResetRequest:
+                    return JsonConvert.SerializeObject(new ID_91_ALARM_RESET_REQUEST(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd94_AlarmResponse:
+                    return JsonConvert.SerializeObject(new ID_94_ALARM_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd131_TransferResponse:
+                    return JsonConvert.SerializeObject(new ID_131_TRANS_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd132_TransferCompleteReport:
+                    return JsonConvert.SerializeObject(new ID_132_TRANS_COMPLETE_REPORT(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd134_TransferEventReport:
+                    return JsonConvert.SerializeObject(new ID_134_TRANS_EVENT_REP(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd135_CarrierIdRenameResponse:
+                    return JsonConvert.SerializeObject(new ID_135_CST_ID_RENAME_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd136_TransferEventReport:
+                    return JsonConvert.SerializeObject(new ID_136_TRANS_EVENT_REP(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd137_TransferCancelResponse:
+                    return JsonConvert.SerializeObject(new ID_137_TRANS_CANCEL_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd139_PauseResponse:
+                    return JsonConvert.SerializeObject(new ID_139_PAUSE_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd141_ModeChangeResponse:
+                    return JsonConvert.SerializeObject(new ID_141_MODE_CHANGE_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd143_StatusResponse:
+                    return JsonConvert.SerializeObject(new ID_143_STATUS_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd144_StatusReport:
+                    return JsonConvert.SerializeObject(new ID_144_STATUS_CHANGE_REP(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd145_PowerOnoffResponse:
+                    return JsonConvert.SerializeObject(new ID_145_POWER_OPE_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd151_AvoidResponse:
+                    return JsonConvert.SerializeObject(new ID_151_AVOID_RESPONSE(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd152_AvoidCompleteReport:
+                    return JsonConvert.SerializeObject(new ID_31_TRANS_REQUEST(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd191_AlarmResetResponse:
+                    return JsonConvert.SerializeObject(new ID_31_TRANS_REQUEST(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
+                case EnumCmdNums.Cmd194_AlarmReport:
+                    return JsonConvert.SerializeObject(new ID_31_TRANS_REQUEST(), Formatting.Indented, new Newtonsoft.Json.Converters.StringEnumConverter());
                 default:
-                    ID_194_ALARM_REPORT cmd194 = new ID_194_ALARM_REPORT();
-                    cmd194.ErrCode = "";
-                    cmd194.ErrDescription = "";
-                    cmd194.ErrStatus = ErrorStatus.ErrSet;
-                    infos = cmd194.GetType().GetProperties();
-                    SetDataGridViewFromInfos(infos, cmd194);
                     break;
             }
-        }
 
-        private void SetDataGridViewFromInfos(PropertyInfo[] infos, object obj)
-        {
-            dataGridView1.Rows.Clear();
-
-            foreach (var info in infos)
-            {
-                if (info.CanWrite)
-                {
-                    var name = info.Name;
-                    var value = info.GetValue(obj);
-                    string[] row = { name, value.ToString() };
-                    dataGridView1.Rows.Add(row);
-                }
-            }
-
-            foreach (var info in infos)
-            {
-                if (info.PropertyType == typeof(RepeatedField<string>))
-                {
-                    var name = info.Name;
-                    var value = info.GetValue(obj);
-                    string[] row = { name, value.ToString() };
-                    dataGridView1.Rows.Add(row);
-                }
-            }
+            return "";
         }
 
         private void btnIsClientAgentNull_Click(object sender, EventArgs e)
         {
             if (agvcConnector.IsClientAgentNull())
             {
-                AppendCommLogMsg("ClientAgent is null.");
+                agvcConnector.AppendCommLog("ClientAgent is null.");
             }
             else
             {
-                AppendCommLogMsg("ClientAgent is not null.");
+                agvcConnector.AppendCommLog("ClientAgent is not null.");
             }
         }
 
@@ -414,8 +293,8 @@ namespace Mirle.Agv.AseMiddler.View
         {
             try
             {
-                tbxCommLogMsg.Text = CommLogMsg;
                 toolStripStatusLabel1.Text = Vehicle.IsAgvcConnect ? " Connect " : " Dis-Connect ";
+                tbxCommLogMsg.Text = agvcConnector.CommLogMsg;
             }
             catch (Exception ex)
             {

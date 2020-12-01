@@ -36,11 +36,8 @@
             this.txtRemotePort = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.txtRemoteIp = new System.Windows.Forms.TextBox();
-            this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.CmdItem = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.CmdValue = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.label1 = new System.Windows.Forms.Label();
-            this.cbSend = new System.Windows.Forms.ComboBox();
+            this.boxAgvCmdNums = new System.Windows.Forms.ComboBox();
             this.btnSend = new System.Windows.Forms.Button();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
@@ -50,7 +47,7 @@
             this.btnHide = new System.Windows.Forms.Button();
             this.tbxCommLogMsg = new System.Windows.Forms.TextBox();
             this.timerUI = new System.Windows.Forms.Timer(this.components);
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            this.txtAgvCommandInfo = new System.Windows.Forms.TextBox();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -112,31 +109,6 @@
             this.txtRemoteIp.Size = new System.Drawing.Size(141, 27);
             this.txtRemoteIp.TabIndex = 15;
             // 
-            // dataGridView1
-            // 
-            this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.CmdItem,
-            this.CmdValue});
-            this.dataGridView1.Location = new System.Drawing.Point(0, 69);
-            this.dataGridView1.Name = "dataGridView1";
-            this.dataGridView1.RowTemplate.Height = 24;
-            this.dataGridView1.Size = new System.Drawing.Size(1295, 390);
-            this.dataGridView1.TabIndex = 24;
-            // 
-            // CmdItem
-            // 
-            this.CmdItem.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.DisplayedCells;
-            this.CmdItem.HeaderText = "Item";
-            this.CmdItem.Name = "CmdItem";
-            this.CmdItem.Width = 51;
-            // 
-            // CmdValue
-            // 
-            this.CmdValue.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.CmdValue.HeaderText = "Value";
-            this.CmdValue.Name = "CmdValue";
-            // 
             // label1
             // 
             this.label1.AutoSize = true;
@@ -147,11 +119,11 @@
             this.label1.TabIndex = 23;
             this.label1.Text = "Cmd";
             // 
-            // cbSend
+            // boxAgvCmdNums
             // 
-            this.cbSend.Font = new System.Drawing.Font("新細明體", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.cbSend.FormattingEnabled = true;
-            this.cbSend.Items.AddRange(new object[] {
+            this.boxAgvCmdNums.Font = new System.Drawing.Font("新細明體", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.boxAgvCmdNums.FormattingEnabled = true;
+            this.boxAgvCmdNums.Items.AddRange(new object[] {
             "Cmd31_TransferRequest",
             "Cmd32_TransferCompleteResponse",
             "Cmd33_ControlZoneCancelRequest",
@@ -189,11 +161,11 @@
             "Cmd174_AddressTeachReport",
             "Cmd191_AlarmResetResponse",
             "Cmd194_AlarmReport"});
-            this.cbSend.Location = new System.Drawing.Point(52, 39);
-            this.cbSend.Name = "cbSend";
-            this.cbSend.Size = new System.Drawing.Size(960, 24);
-            this.cbSend.TabIndex = 22;
-            this.cbSend.SelectedValueChanged += new System.EventHandler(this.cbSend_SelectedValueChanged);
+            this.boxAgvCmdNums.Location = new System.Drawing.Point(52, 39);
+            this.boxAgvCmdNums.Name = "boxAgvCmdNums";
+            this.boxAgvCmdNums.Size = new System.Drawing.Size(960, 24);
+            this.boxAgvCmdNums.TabIndex = 22;
+            this.boxAgvCmdNums.SelectedValueChanged += new System.EventHandler(this.cbSend_SelectedValueChanged);
             // 
             // btnSend
             // 
@@ -260,12 +232,12 @@
             // 
             // tbxCommLogMsg
             // 
-            this.tbxCommLogMsg.Font = new System.Drawing.Font("新細明體", 11.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
-            this.tbxCommLogMsg.Location = new System.Drawing.Point(0, 465);
+            this.tbxCommLogMsg.Font = new System.Drawing.Font("新細明體", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.tbxCommLogMsg.Location = new System.Drawing.Point(0, 402);
             this.tbxCommLogMsg.Multiline = true;
             this.tbxCommLogMsg.Name = "tbxCommLogMsg";
             this.tbxCommLogMsg.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.tbxCommLogMsg.Size = new System.Drawing.Size(1295, 381);
+            this.tbxCommLogMsg.Size = new System.Drawing.Size(1295, 444);
             this.tbxCommLogMsg.TabIndex = 60;
             // 
             // timerUI
@@ -273,6 +245,17 @@
             this.timerUI.Enabled = true;
             this.timerUI.Interval = 500;
             this.timerUI.Tick += new System.EventHandler(this.timerUI_Tick);
+            // 
+            // txtAgvCommandInfo
+            // 
+            this.txtAgvCommandInfo.Font = new System.Drawing.Font("新細明體", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(136)));
+            this.txtAgvCommandInfo.Location = new System.Drawing.Point(0, 69);
+            this.txtAgvCommandInfo.Multiline = true;
+            this.txtAgvCommandInfo.Name = "txtAgvCommandInfo";
+            this.txtAgvCommandInfo.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtAgvCommandInfo.Size = new System.Drawing.Size(1295, 327);
+            this.txtAgvCommandInfo.TabIndex = 61;
+            this.txtAgvCommandInfo.WordWrap = false;
             // 
             // AgvcConnectorForm
             // 
@@ -282,12 +265,12 @@
             this.BackColor = System.Drawing.SystemColors.GradientInactiveCaption;
             this.ClientSize = new System.Drawing.Size(1295, 871);
             this.ControlBox = false;
+            this.Controls.Add(this.txtAgvCommandInfo);
             this.Controls.Add(this.tbxCommLogMsg);
             this.Controls.Add(this.btnHide);
             this.Controls.Add(this.statusStrip1);
-            this.Controls.Add(this.dataGridView1);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.cbSend);
+            this.Controls.Add(this.boxAgvCmdNums);
             this.Controls.Add(this.btnSend);
             this.Controls.Add(this.btnIsClientAgentNull);
             this.Controls.Add(this.btnDisConnect);
@@ -304,7 +287,6 @@
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "AgvcConnectorForm";
             this.Load += new System.EventHandler(this.CommunicationForm_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
             this.statusStrip1.ResumeLayout(false);
             this.statusStrip1.PerformLayout();
             this.ResumeLayout(false);
@@ -319,11 +301,8 @@
         private System.Windows.Forms.TextBox txtRemotePort;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox txtRemoteIp;
-        private System.Windows.Forms.DataGridView dataGridView1;
-        private System.Windows.Forms.DataGridViewTextBoxColumn CmdItem;
-        private System.Windows.Forms.DataGridViewTextBoxColumn CmdValue;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.ComboBox cbSend;
+        private System.Windows.Forms.ComboBox boxAgvCmdNums;
         private System.Windows.Forms.Button btnSend;
         private System.Windows.Forms.StatusStrip statusStrip1;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
@@ -333,5 +312,6 @@
         private System.Windows.Forms.Button btnHide;
         private System.Windows.Forms.TextBox tbxCommLogMsg;
         private System.Windows.Forms.Timer timerUI;
+        private System.Windows.Forms.TextBox txtAgvCommandInfo;
     }
 }
