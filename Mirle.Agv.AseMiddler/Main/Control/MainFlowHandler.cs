@@ -377,7 +377,12 @@ namespace Mirle.Agv.AseMiddler.Controller
                             AvoidMoveComplete();
                             break;
                         case EnumTransferStep.MoveToAddressWaitArrival:
-                            if (Vehicle.AseMoveStatus.IsMoveEnd)
+                            if (Vehicle.TransferCommand.SendWaitTimeout)
+                            {
+                                Vehicle.TransferCommand.IsStopAndClear = true;
+
+                            }
+                            else if (Vehicle.AseMoveStatus.IsMoveEnd)
                             {
                                 MoveToAddressEnd();
                             }
@@ -387,7 +392,12 @@ namespace Mirle.Agv.AseMiddler.Controller
                             }
                             break;
                         case EnumTransferStep.WaitMoveArrivalVitualPortReply:
-                            if (Vehicle.TransferCommand.IsVitualPortUnloadArrivalReply)
+                            if (Vehicle.TransferCommand.SendWaitTimeout)
+                            {
+                                Vehicle.TransferCommand.IsStopAndClear = true;
+
+                            }
+                            else if (Vehicle.TransferCommand.IsVitualPortUnloadArrivalReply)
                             {
                                 DealVitualPortUnloadArrivalReply();
                             }
@@ -402,7 +412,12 @@ namespace Mirle.Agv.AseMiddler.Controller
                             LoadArrival();
                             break;
                         case EnumTransferStep.WaitLoadArrivalReply:
-                            if (Vehicle.TransferCommand.IsLoadArrivalReply)
+                            if (Vehicle.TransferCommand.SendWaitTimeout)
+                            {
+                                Vehicle.TransferCommand.IsStopAndClear = true;
+
+                            }
+                            else if (Vehicle.TransferCommand.IsLoadArrivalReply)
                             {
                                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨.到站.回報.成功] AgvcConnector_LoadArrivalReply.");
                                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.Load;
@@ -419,7 +434,12 @@ namespace Mirle.Agv.AseMiddler.Controller
                             }
                             break;
                         case EnumTransferStep.WaitLoadCompleteReply:
-                            if (Vehicle.TransferCommand.IsLoadCompleteReply)
+                            if (Vehicle.TransferCommand.SendWaitTimeout)
+                            {
+                                Vehicle.TransferCommand.IsStopAndClear = true;
+
+                            }
+                            else if (Vehicle.TransferCommand.IsLoadCompleteReply)
                             {
                                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "[取貨.完成.回報.成功] AgvcConnector_LoadCompleteReply.");
                                 Vehicle.TransferCommand.TransferStep = EnumTransferStep.WaitCstIdReadReply;
@@ -428,7 +448,12 @@ namespace Mirle.Agv.AseMiddler.Controller
                             }
                             break;
                         case EnumTransferStep.WaitCstIdReadReply:
-                            if (Vehicle.TransferCommand.IsCstIdReadReply)
+                            if (Vehicle.TransferCommand.SendWaitTimeout)
+                            {
+                                Vehicle.TransferCommand.IsStopAndClear = true;
+
+                            }
+                            else if (Vehicle.TransferCommand.IsCstIdReadReply)
                             {
                                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "[取貨.貨號回報.成功] AgvcConnector_CstIdReadReply.");
 
@@ -439,7 +464,12 @@ namespace Mirle.Agv.AseMiddler.Controller
                             UnloadArrival();
                             break;
                         case EnumTransferStep.WaitUnloadArrivalReply:
-                            if (Vehicle.TransferCommand.IsUnloadArrivalReply)
+                            if (Vehicle.TransferCommand.SendWaitTimeout)
+                            {
+                                Vehicle.TransferCommand.IsStopAndClear = true;
+
+                            }
+                            else if (Vehicle.TransferCommand.IsUnloadArrivalReply)
                             {
                                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放貨.到站.回報.成功] AgvcConnector_OnAgvcAcceptUnloadArrivalEvent.");
 
@@ -457,7 +487,12 @@ namespace Mirle.Agv.AseMiddler.Controller
                             }
                             break;
                         case EnumTransferStep.WaitUnloadCompleteReply:
-                            if (Vehicle.TransferCommand.IsUnloadCompleteReply)
+                            if (Vehicle.TransferCommand.SendWaitTimeout)
+                            {
+                                Vehicle.TransferCommand.IsStopAndClear = true;
+
+                            }
+                            else if (Vehicle.TransferCommand.IsUnloadCompleteReply)
                             {
                                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "[放貨.完成.回報.成功] AgvcConnector_UnloadCompleteReply.");
 

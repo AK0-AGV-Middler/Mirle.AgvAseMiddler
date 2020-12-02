@@ -40,6 +40,7 @@ namespace Mirle.Agv.AseMiddler.Model
         public bool IsE84ContinueLoadAndUnlaod { get; set; } = false;
         public string E84ContinueCommandId { get; set; } = "";
         public bool IsCanceled { get; set; }
+        public bool SendWaitTimeout { get; set; }
 
         public AgvcTransferCommand()
         {

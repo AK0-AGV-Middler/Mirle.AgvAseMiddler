@@ -535,6 +535,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 if (scheduleWrapper.RetrySendWaitCounter <= 0)
                                 {
                                     //OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
+                                    CheckTimeoutMessageCommandID(scheduleWrapper.Wrapper.ImpTransEventRep.CmdID);
                                 }
                                 else
                                 {
@@ -560,12 +561,18 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 if (scheduleWrapper.RetrySendWaitCounter <= 0)
                                 {
                                     //OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
+                                    if (!ClientAgent.IsConnection)
+                                    {
+                                        mainFlowHandler.SetAlarmFromAgvm(60);
+                                    }
                                 }
                                 else
                                 {
                                     scheduleWrapper.RetrySendWaitCounter--;
                                     PrimarySendWaitQueue.Enqueue(scheduleWrapper);
                                 }
+
+                                CheckAgvcConnection();
                             }
                         }
                         break;
@@ -582,12 +589,15 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 if (scheduleWrapper.RetrySendWaitCounter <= 0)
                                 {
                                     //OnSendRecvTimeoutEvent?.Invoke(this, default(EventArgs));
+                                    CheckTimeoutMessageCommandID(scheduleWrapper.Wrapper.ImpTransEventRep.CmdID);
                                 }
                                 else
                                 {
                                     scheduleWrapper.RetrySendWaitCounter--;
                                     PrimarySendWaitQueue.Enqueue(scheduleWrapper);
                                 }
+
+                                CheckAgvcConnection();
                             }
                         }
                         break;
@@ -598,6 +608,14 @@ namespace Mirle.Agv.AseMiddler.Controller
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
+        private void CheckTimeoutMessageCommandID(string cmdID)
+        {
+            if (Vehicle.TransferCommand.CommandId.Trim() == cmdID.Trim())
+            {
+                Vehicle.TransferCommand.SendWaitTimeout = true;
             }
         }
 
