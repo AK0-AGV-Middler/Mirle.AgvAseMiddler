@@ -35,6 +35,8 @@ namespace Mirle.Agv.AseMiddler.Model
         public bool IsCharger { get; set; } = false;
         public string LastAddress { get; set; } = "";
         public int LowPowerRepeatedlyChargeCounter { get; set; } = 0;
+        public bool LowPowerArrivalChargeFlag { get; set; } = false;
+
         #endregion
         #region 200828 dabid for Watch Not AskAllSectionsReserveInOnce
 

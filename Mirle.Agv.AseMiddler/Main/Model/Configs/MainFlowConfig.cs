@@ -20,6 +20,7 @@ namespace Mirle.Agv.AseMiddler.Model.Configs
         public bool DualCommandOptimize { get; set; } = false;
         public bool BcrByPass { get; set; } = false;
         public int HighPowerPercentage { get; set; } = 90;
+        public int LowPowerPercentage { get; set; } = 70;
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
         public EnumSlotSelect SlotDisable { get; set; } = EnumSlotSelect.None;
         public int InitialPositionRangeMm { get; set; } = 500;

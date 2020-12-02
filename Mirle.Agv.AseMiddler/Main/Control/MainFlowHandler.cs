@@ -311,19 +311,16 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"MainFlow : StartVisitTransferSteps");
         }
-
         public void PauseVisitTransferSteps()
         {
             IsVisitTransferStepPause = true;
             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"MainFlow : PauseVisitTransferSteps");
         }
-
         public void ResumeVisitTransferSteps()
         {
             IsVisitTransferStepPause = false;
             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"MainFlow : ResumeVisitTransferSteps");
         }
-
         private void VisitTransferSteps()
         {
             while (true)
@@ -614,7 +611,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-
         private void MoveToAddressArrival()
         {
             try
@@ -733,7 +729,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-
         private bool CheckUnloadEnrouteBindSamePortLoad()
         {
             var unloadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId];
@@ -768,14 +763,21 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             return false;
         }
-
         private void CheckLoadEnrouteBindSamePortUnload()
         {
             try
             {
                 if (Vehicle.MainFlowConfig.IsE84Continue)
                 {
-                    var loadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.LoadPortId];
+                    if (string.IsNullOrEmpty(Vehicle.TransferCommand.LoadPortId))
+                    {
+                        throw new Exception("CheckLoadEnrouteBindSamePortUnload fail. Vehicle.TransferCommand.LoadPortId is empty");
+                    }
+                    if (!Vehicle.Mapinfo.portMap.ContainsKey(Vehicle.TransferCommand.LoadPortId.Trim()))
+                    {
+                        throw new Exception($"CheckLoadEnrouteBindSamePortUnload fail. !Vehicle.Mapinfo.portMap.ContainsKey {Vehicle.TransferCommand.LoadPortId}");
+                    }
+                    var loadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.LoadPortId.Trim()];
                     if (loadPort.IsAgvStationPort())
                     {
                         var agvStation = Vehicle.Mapinfo.agvStationMap[loadPort.AgvStationId];
@@ -805,7 +807,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-
         private void VehicleSlotFullFindFitUnloadCommand()
         {
             Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToLoad;
@@ -816,7 +817,6 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             SpinWait.SpinUntil(() => foundNextCommand, 2000);
         }
-
         private bool CheckSameStationUnloadCommand()
         {
             if (!string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
@@ -844,13 +844,16 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             return false;
         }
-
         private bool IsFirstOrderDealVitualPort()
         {
             try
             {
                 if (Vehicle.TransferCommand.EnrouteState == CommandState.UnloadEnroute)
                 {
+                    if (!Vehicle.Mapinfo.portMap.ContainsKey(Vehicle.TransferCommand.UnloadPortId.Trim()))
+                    {
+                        throw new Exception($"IsFirstOrderDealVitualPort fail. !Vehicle.Mapinfo.portMap.ContainsKey {Vehicle.TransferCommand.UnloadPortId}");
+                    }
                     return Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId].IsVitualPort;
                 }
                 return false;
@@ -861,7 +864,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 return false;
             }
         }
-
         private void DealVitualPortUnloadArrivalReply()
         {
             try
@@ -905,7 +907,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-
         private void VitualPortReplyUnreadyFindFitLoadCommand()
         {
             Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
@@ -916,7 +917,6 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             SpinWait.SpinUntil(() => foundNextCommand, 2000);
         }
-
         private bool CheckSameStationLoadCommand()
         {
             if (!string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.AgvStationId))
@@ -944,7 +944,6 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             return false;
         }
-
         private void MoveToAddressEnd()
         {
             try
@@ -1043,7 +1042,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-
         private void AvoidMoveComplete()
         {
             try
@@ -1096,7 +1094,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-
         private void AgvcConnector_OnOverrideCommandEvent(object sender, AgvcTransferCommand transferCommand)
         {
             try
@@ -1110,7 +1107,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-
         private void AgvcConnector_OnAvoideRequestEvent(object sender, AseMovingGuide aseMovingGuide)
         {
             #region 避車檢查
@@ -1172,17 +1168,14 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             #endregion
         }
-
         public bool IsMoveStep()
         {
             return Vehicle.TransferCommand.TransferStep == EnumTransferStep.MoveToAddressWaitEnd || Vehicle.TransferCommand.TransferStep == EnumTransferStep.MoveToAddressWaitArrival;
         }
-
         private bool IsMoveStopByNoReserve()
         {
             return Vehicle.AseMovingGuide.ReserveStop == VhStopSingle.On;
         }
-
         private void RejectAvoidCommandAndResume(int alarmCode, string reason, AseMovingGuide aseMovingGuide)
         {
             try
@@ -1197,7 +1190,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-
         public bool CanVehMove()
         {
             try
@@ -1214,7 +1206,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             return Vehicle.AseRobotStatus.IsHome && !Vehicle.IsCharging;
 
         }
-
         public void AgvcConnector_GetReserveOkUpdateMoveControlNextPartMovePosition(MapSection mapSection, EnumIsExecute keepOrGo)
         {
             try
@@ -2579,6 +2570,9 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         #region Thd Watch Charge Stage
 
+        DateTime lastLowPowerArrivalChargeFlagOn = DateTime.Now;
+        DateTime lastLowPowerArrivalChargeFlagOff = DateTime.Now;
+
         private void WatchChargeStage()
         {
             while (true)
@@ -2595,20 +2589,27 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                     UpdateBatteryAndChargingeStatus();
 
-                    Vehicle.LowPower = IsLowPower();//200824 dabid+stop
+                    Vehicle.LowPower = IsBatteryLowerThanHighPower();//200824 dabid+stop
                     Vehicle.VehicleIdle = IsVehicleIdle();//200824 dabid+
 
-                    if (Vehicle.AutoState == EnumAutoState.Auto && IsVehicleIdle())
+                    if (Vehicle.AutoState == EnumAutoState.Auto)
                     {
-                        if (IsLowPower())
+                        if (IsVehicleIdle())
                         {
-                            LowPowerStartCharge(Vehicle.AseMoveStatus.LastAddress);
+                            if (IsBatteryLowerThanHighPower())
+                            {
+                                LowPowerStartCharge(Vehicle.AseMoveStatus.LastAddress);
+                            }
+                        }
+                        else
+                        {
+                            CheckVehicleLowPowerArrivalChargeFlag();
                         }
                     }
 
-                    if (IsMuchLowPower() && !Vehicle.IsCharging) //200701 dabid+
+                    if (IsBatteryLowerThanLowPower() && !Vehicle.IsCharging) //200701 dabid+
                     {
-                        throw new Exception($"[AutoState={Vehicle.AutoState}][IsVehicleIdle()={IsVehicleIdle()}][Percentage={Vehicle.AseBatteryStatus.Percentage}][HighThreshold={Vehicle.MainFlowConfig.HighPowerPercentage}]");
+                        throw new Exception($"[AutoState={Vehicle.AutoState}][IsVehicleIdle()={IsVehicleIdle()}][Percentage={Vehicle.AseBatteryStatus.Percentage}][LowThreshold={Vehicle.MainFlowConfig.LowPowerPercentage}]");
                     }
                 }
                 catch (Exception ex)
@@ -2622,9 +2623,23 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
-        private bool IsMuchLowPower()
+        private void CheckVehicleLowPowerArrivalChargeFlag()
         {
-            return Vehicle.AseBatteryStatus.Percentage + 10 <= Vehicle.MainFlowConfig.HighPowerPercentage;
+            if (IsBatteryHigherThanHighPower())
+            {
+                Vehicle.LowPowerArrivalChargeFlag = false;
+                lastLowPowerArrivalChargeFlagOff = DateTime.Now;
+            }
+            else if (IsBatteryLowerThanLowPower())
+            {
+                Vehicle.LowPowerArrivalChargeFlag = true;
+                lastLowPowerArrivalChargeFlagOn = DateTime.Now;
+            }
+        }
+
+        private bool IsBatteryLowerThanLowPower()
+        {
+            return Vehicle.AseBatteryStatus.Percentage <= Vehicle.MainFlowConfig.LowPowerPercentage;
         }
 
         private void UpdateBatteryAndChargingeStatus()
@@ -2664,12 +2679,12 @@ namespace Mirle.Agv.AseMiddler.Controller
             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"StartWatchChargeStage");
         }
 
-        private bool IsLowPower()
+        private bool IsBatteryLowerThanHighPower()
         {
             return Vehicle.AseBatteryStatus.Percentage <= Vehicle.MainFlowConfig.HighPowerPercentage;
         }
 
-        private bool IsHighPower()
+        private bool IsBatteryHigherThanHighPower()
         {
             return Vehicle.AseBatteryStatus.Percentage > Vehicle.MainFlowConfig.HighPowerPercentage;
         }
@@ -2689,7 +2704,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     if (endAddress.IsCharger())
                     {
-                        if (IsHighPower())
+                        if (IsBatteryHigherThanHighPower())
                         {
                             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"Vehicle arrival {endAddress.Id},Charge Direction = {endAddress.ChargeDirection},Precentage = {Vehicle.AseBatteryStatus.Percentage} > {Vehicle.MainFlowConfig.HighPowerPercentage}(Threshold),  thus NOT send charge command.");
                             return;
@@ -2739,11 +2754,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                     Vehicle.ArrivalCharge = IsArrivalCharge;//200824 dabid for Watch Not AUTO Charge
                     Vehicle.LastAddress = lastAddress.Id;
                     Vehicle.IsCharger = lastAddress.IsCharger();//200824 dabid for Watch Not AUTO Charge
-
-                    //if (IsArrivalCharge)
-                    //{
-                    //    throw new Exception("Vehicle is Arrival-Charging.");
-                    //}
 
                     if (Vehicle.IsCharging)
                     {
@@ -2859,12 +2869,20 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[到站.充電] : ArrivalStartCharge.");
-
-                Task.Run(() =>
+                if (Vehicle.LowPowerArrivalChargeFlag)
                 {
-                    StartCharge(endAddress);
-                });
+                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[到站.充電] : ArrivalStartCharge.");
+
+                    Task.Run(() =>
+                    {
+                        StartCharge(endAddress);
+                    });
+                }
+                else
+                {
+                    string flagTimeStamp = "HH:mm:ss.fff";
+                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[到站.不充電] : Arrival No Charge.[Flag Off][Battery={Vehicle.AseBatteryStatus.Percentage}][LowTh={Vehicle.MainFlowConfig.LowPowerPercentage}][LastOn={lastLowPowerArrivalChargeFlagOn.ToString(flagTimeStamp)}][LastOff={lastLowPowerArrivalChargeFlagOff.ToString(flagTimeStamp)}]");
+                }
             }
             catch (Exception ex)
             {
@@ -3145,6 +3163,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 StopClearAndReset();
             }
         }
+
         private void UpdateMovePassSections(string id)
         {
             int getReserveOkSectionIndex = 0;
@@ -3166,6 +3185,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
 
         }
+
         public void StopVehicle()
         {
             asePackage.MoveStop();
