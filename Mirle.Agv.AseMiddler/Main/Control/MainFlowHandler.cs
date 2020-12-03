@@ -2579,12 +2579,16 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 try
                 {
-                    if (!Vehicle.MainFlowConfig.IsSimulation)
+                    if (Vehicle.MainFlowConfig.IsSimulation)
                     {
-                        if (!asePackage.psWrapper.IsConnected())
-                        {
-                            throw new Exception("AsePackage disconnect. Can not get Battery and Charging Status.");
-                        }
+                        SpinWait.SpinUntil(() => false, 100*Vehicle.MainFlowConfig.WatchLowPowerSleepTimeMs);
+
+                        continue;
+                    }
+
+                    if (!asePackage.psWrapper.IsConnected())
+                    {
+                        throw new Exception("AsePackage disconnect. Can not get Battery and Charging Status.");
                     }
 
                     UpdateBatteryAndChargingeStatus();
@@ -2592,6 +2596,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     Vehicle.LowPower = IsBatteryLowerThanHighPower();//200824 dabid+stop
                     Vehicle.VehicleIdle = IsVehicleIdle();//200824 dabid+
 
+                   
                     if (Vehicle.AutoState == EnumAutoState.Auto)
                     {
                         if (IsVehicleIdle())
@@ -2644,6 +2649,8 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void UpdateBatteryAndChargingeStatus()
         {
+            if (Vehicle.MainFlowConfig.IsSimulation) return;
+
             asePackage.SendChargeStatusRequest();
             asePackage.SendBatteryStatusRequest();
             SpinWait.SpinUntil(() => asePackage.IsBatteryRequestReply && asePackage.IsChargeStatusRequestReply, 15 * 1000);
@@ -2833,6 +2840,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[斷充.逾時] Stop Charge Timeout.[asePackage.IsStopChargeReply = {asePackage.IsStopChargeReply}]");
                             SetAlarmFromAgvm(000014);
                         }
+                    }
+                    else
+                    {
+                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $@"[斷充.成功] Vehicle is not charging.");
                     }
                 }
             }
@@ -3777,11 +3788,14 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 lock (DebugLogMsg)
                 {
-                    DebugLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", DebugLogMsg);
-
-                    if (DebugLogMsg.Length > 65535)
+                    for (int i = 0; i < 100; i++)
                     {
-                        DebugLogMsg = DebugLogMsg.Substring(65535);
+                        DebugLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", DebugLogMsg);
+
+                        if (DebugLogMsg.Length > 65535)
+                        {
+                            DebugLogMsg = DebugLogMsg.Substring(65535);
+                        }
                     }
                 }
             }
