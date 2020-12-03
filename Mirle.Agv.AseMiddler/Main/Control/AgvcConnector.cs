@@ -2869,22 +2869,25 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         public void AppendCommLog(string msg)
         {
-            try
+            if (!Vehicle.IsIgnoreAppendDebug)
             {
-                lock (CommLogMsg)
+                try
                 {
-                    CommLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", CommLogMsg);
-
-                    if (CommLogMsg.Length > 65535)
+                    lock (CommLogMsg)
                     {
-                        CommLogMsg = CommLogMsg.Substring(65535);
+                        CommLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", CommLogMsg);
+
+                        if (CommLogMsg.Length > 65535)
+                        {
+                            CommLogMsg = CommLogMsg.Substring(65535);
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
+                catch (Exception ex)
+                {
+                    LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+                }
+            }            
         }
 
         private void LogException(string classMethodName, string exMsg)

@@ -243,7 +243,7 @@
             // timerUI
             // 
             this.timerUI.Enabled = true;
-            this.timerUI.Interval = 500;
+            this.timerUI.Interval = 2000;
             this.timerUI.Tick += new System.EventHandler(this.timerUI_Tick);
             // 
             // txtAgvCommandInfo

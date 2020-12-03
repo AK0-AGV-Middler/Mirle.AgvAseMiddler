@@ -591,7 +591,10 @@ namespace Mirle.Agv.AseMiddler.View
                 //UpdatePerformanceCounter(performanceCounterCpu, ucPerformanceCounterCpu);
                 //UpdatePerformanceCounter(performanceCounterRam, ucPerformanceCounterRam);
 
-                tbxDebugLogMsg.Text = mainFlowHandler.DebugLogMsg;
+                if (!Vehicle.IsIgnoreAppendDebug)
+                {
+                    tbxDebugLogMsg.Text = mainFlowHandler.DebugLogMsg;
+                }
 
                 ucSoc.TagValue = Vehicle.AseBatteryStatus.Percentage.ToString("F1") + $"/" + Vehicle.AseBatteryStatus.Voltage.ToString("F2");
 
@@ -1483,6 +1486,17 @@ namespace Mirle.Agv.AseMiddler.View
         private void btnKeyInSoc_Click(object sender, EventArgs e)
         {
             Vehicle.AseBatteryStatus.Percentage = decimal.ToInt32(numSoc.Value);
+        }
+
+        private void cbIsIgnoreAppendDebug_CheckedChanged(object sender, EventArgs e)
+        {
+            Vehicle.IsIgnoreAppendDebug = cbIsIgnoreAppendDebug.Checked;
+
+            if (cbIsIgnoreAppendDebug.Checked)
+            {
+                tbxDebugLogMsg.Text = "Ignore Append Debug.";
+            }
+            
         }
     }
 }

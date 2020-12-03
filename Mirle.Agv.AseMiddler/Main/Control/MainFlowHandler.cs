@@ -3784,24 +3784,27 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         public void AppendDebugLog(string msg)
         {
-            try
+            if (!Vehicle.IsIgnoreAppendDebug)
             {
-                lock (DebugLogMsg)
+                try
                 {
-                    for (int i = 0; i < 100; i++)
+                    lock (DebugLogMsg)
                     {
-                        DebugLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", DebugLogMsg);
-
-                        if (DebugLogMsg.Length > 65535)
+                        for (int i = 0; i < 100; i++)
                         {
-                            DebugLogMsg = DebugLogMsg.Substring(65535);
+                            DebugLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", DebugLogMsg);
+
+                            if (DebugLogMsg.Length > 65535)
+                            {
+                                DebugLogMsg = DebugLogMsg.Substring(65535);
+                            }
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+                catch (Exception ex)
+                {
+                    LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+                }
             }
         }
 
