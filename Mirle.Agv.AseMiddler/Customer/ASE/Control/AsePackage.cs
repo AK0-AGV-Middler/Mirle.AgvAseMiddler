@@ -52,12 +52,12 @@ namespace Mirle.Agv.AseMiddler.Controller
         public ConcurrentQueue<AsePositionArgs> ReceivePositionArgsQueue { get; set; } = new ConcurrentQueue<AsePositionArgs>();
         public ConcurrentQueue<PSMessageXClass> PrimaryTimeoutQueue { get; set; } = new ConcurrentQueue<PSMessageXClass>();
 
-        public event EventHandler<string> ImportantPspLog;
+        //public event EventHandler<string> ImportantPspLog;
         public event EventHandler<string> OnStatusChangeReportEvent;
         public event EventHandler<EnumAutoState> OnModeChangeEvent;
         public event EventHandler<AseCarrierSlotStatus> OnUpdateSlotStatusEvent;
         public event EventHandler<int> OnAlarmCodeSetEvent;
-        public event EventHandler<int> OnAlarmCodeResetEvent;
+        //public event EventHandler<int> OnAlarmCodeResetEvent;
         public event EventHandler OnAlarmCodeAllResetEvent;
         public event EventHandler<double> OnBatteryPercentageChangeEvent;
         public event EventHandler<bool> OnOpPauseOrResumeEvent;
@@ -801,7 +801,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
+                //ImportantPspLog?.Invoke(this, ex.Message);
             }
         }
 
@@ -836,7 +836,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
+                //ImportantPspLog?.Invoke(this, ex.Message);
                 OnRobotEndEvent?.Invoke(this, EnumRobotEndType.RobotError);
             }
         }
@@ -857,7 +857,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
+                //ImportantPspLog?.Invoke(this, ex.Message);
             }
         }
 
@@ -879,7 +879,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
+                //ImportantPspLog?.Invoke(this, ex.Message);
             }
         }
 
@@ -914,7 +914,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void ShowTestMsg()
         {
-            ImportantPspLog?.Invoke(this, "A test msg from AGVL.");
+            //ImportantPspLog?.Invoke(this, "A test msg from AGVL.");
         }
 
         private void ReceiveMoveAppendArrivalReport(string psMessage)
@@ -944,10 +944,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                     positionArgs.Speed = speed;
                 }
 
-                if (positionArgs.Arrival != EnumAseArrival.Arrival)
-                {
-                    ImportantPspLog?.Invoke(this, $"ReceiveMoveAppendArrivalReport. [{psMessage.Substring(0, 1)}][{positionArgs.Arrival}][({(int)x},{(int)y})]");
-                }
+                //if (positionArgs.Arrival != EnumAseArrival.Arrival)
+                //{
+                //    ImportantPspLog?.Invoke(this, $"ReceiveMoveAppendArrivalReport. [{psMessage.Substring(0, 1)}][{positionArgs.Arrival}][({(int)x},{(int)y})]");
+                //}
 
                 ReceivePositionArgsQueue.Enqueue(positionArgs);
             }
@@ -1002,14 +1002,11 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                OnStatusChangeReportEvent?.Invoke(this, $"AllAlarmReset:");
-
                 OnAlarmCodeAllResetEvent?.Invoke(this, new EventArgs());
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
             }
         }
 
@@ -1031,13 +1028,12 @@ namespace Mirle.Agv.AseMiddler.Controller
                 }
                 else
                 {
-                    OnAlarmCodeResetEvent?.Invoke(this, alarmCode);
+                    OnAlarmCodeAllResetEvent?.Invoke(default, default);
                 }
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
             }
         }
 
@@ -1045,8 +1041,9 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                bool isCharging = psMessage.Substring(0, 1) == "1";
-                if (isCharging)
+                bool receiveIsCharging = psMessage.Substring(0, 1) == "1";
+                bool isChargeChange = receiveIsCharging != Vehicle.IsCharging;
+                if (receiveIsCharging)
                 {
                     IsStartChargeReply = true;
                 }
@@ -1054,14 +1051,16 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     IsStopChargeReply = true;
                 }
-                Vehicle.IsCharging = isCharging;
+                Vehicle.IsCharging = receiveIsCharging;
                 IsChargeStatusRequestReply = true;
-                OnStatusChangeReportEvent?.Invoke(this, $"Local Update Charge Status :[{ Vehicle.IsCharging }]");
+                if (isChargeChange)
+                {
+                    OnStatusChangeReportEvent?.Invoke(this, $"Local Update Charge Status :[{ Vehicle.IsCharging }]");
+                }
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
             }
         }
 
@@ -1111,9 +1110,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
             catch (Exception ex)
             {
-                string msg = "Carrier Slot Report, " + ex.Message;
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
-                ImportantPspLog?.Invoke(this, msg);
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "Carrier Slot Report, " + ex.Message);
             }
         }
 
@@ -1219,17 +1216,21 @@ namespace Mirle.Agv.AseMiddler.Controller
             try
             {
                 AseRobotStatus aseRobotStatus = new AseRobotStatus();
-                aseRobotStatus.RobotState = GetRobotStatus(psMessage.Substring(0, 1));
-                aseRobotStatus.IsHome = psMessage.Substring(1, 1) == "1";
-
+                var receiveRobotState = GetRobotStatus(psMessage.Substring(0, 1));
+                var receiveRobotHome = psMessage.Substring(1, 1) == "1";
+                bool isRobotStatusChange = (receiveRobotState != Vehicle.AseRobotStatus.RobotState) || (receiveRobotHome != Vehicle.AseRobotStatus.IsHome);
+                aseRobotStatus.RobotState = receiveRobotState;
+                aseRobotStatus.IsHome = receiveRobotHome;
                 Vehicle.AseRobotStatus = aseRobotStatus;
 
-                OnStatusChangeReportEvent?.Invoke(this, $"UpdateRobotStatus:[{Vehicle.AseRobotStatus.RobotState}][RobotHome={Vehicle.AseRobotStatus.IsHome}]");
+                if (isRobotStatusChange)
+                {
+                    OnStatusChangeReportEvent?.Invoke(this, $"Update [RobotState={Vehicle.AseRobotStatus.RobotState}][RobotHome={Vehicle.AseRobotStatus.IsHome}]");
+                }
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
             }
         }
 
@@ -1253,17 +1254,20 @@ namespace Mirle.Agv.AseMiddler.Controller
             try
             {
                 AseMoveStatus aseMoveStatus = new AseMoveStatus(Vehicle.AseMoveStatus);
-                aseMoveStatus.AseMoveState = GetMoveState(psMessage.Substring(0, 1));
+                var receiveMoveState = GetMoveState(psMessage.Substring(0, 1));
+                bool isMoveStateChange = Vehicle.AseMoveStatus.AseMoveState != receiveMoveState;
+                aseMoveStatus.AseMoveState = receiveMoveState;
                 aseMoveStatus.HeadDirection = GetIntTryParse(psMessage.Substring(1, 3));
                 Vehicle.AseMoveStatus = aseMoveStatus;
 
-                OnStatusChangeReportEvent?.Invoke(this, $"UpdateMoveStatus:[{Vehicle.AseMoveStatus.AseMoveState}]");
+                if (isMoveStateChange)
+                {
+                    OnStatusChangeReportEvent?.Invoke(this, $"Update Move State : [{Vehicle.AseMoveStatus.AseMoveState}]");
+                }
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
-
             }
         }
 
@@ -1293,13 +1297,11 @@ namespace Mirle.Agv.AseMiddler.Controller
         private void SetVehicleManual()
         {
             OnModeChangeEvent?.Invoke(this, EnumAutoState.Manual);
-            ImportantPspLog?.Invoke(this, $"ModeChange : Manual");
         }
 
         private void SetVehicleAuto()
         {
             OnModeChangeEvent?.Invoke(this, EnumAutoState.Auto);
-            ImportantPspLog?.Invoke(this, $"ModeChange : Auto");
         }
 
         public void SetVehicleAutoScenario()
@@ -1323,7 +1325,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
             }
         }
 
@@ -1459,7 +1460,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     if (result == 0)
                     {
-                        ImportantPspLog?.Invoke(this, $"[片段移動 被拒絕] MoveAppend rejected by local. Do Move Fail Flow.");
                         AseMoveStatus moveStatus = new AseMoveStatus(Vehicle.AseMoveStatus);
                         AsePositionArgs positionArgs = new AsePositionArgs()
                         {
@@ -1471,14 +1471,9 @@ namespace Mirle.Agv.AseMiddler.Controller
                         };
                         ReceivePositionArgsQueue.Enqueue(positionArgs);
                     }
-                    else
-                    {
-                        ImportantPspLog?.Invoke(this, $"[片段移動 回應接受] MoveAppend accept by local. Wait arrival report.");
-                    }
                 }
                 else
                 {
-                    ImportantPspLog?.Invoke(this, $"[片段移動 回應異常] MoveAppend reply unknow by local. Do Move Fail Flow.");
                     AseMoveStatus moveStatus = new AseMoveStatus(Vehicle.AseMoveStatus);
                     AsePositionArgs positionArgs = new AsePositionArgs()
                     {
@@ -1517,7 +1512,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
             }
         }
 
@@ -1570,11 +1564,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                     positionArgs.Speed = speed;
                 }
 
-                if (arrival == EnumAseArrival.Fail)
-                {
-                    ImportantPspLog?.Invoke(this, $"ReceivePositionReportRequestAck. [{psMessage.Substring(0, 1)}][{arrival.ToString()}][({x.ToString("F0")},{y.ToString("F0")})]");
-                }
-
                 ReceivePositionArgsQueue.Enqueue(positionArgs);
             }
             catch (Exception ex)
@@ -1608,7 +1597,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                ImportantPspLog?.Invoke(this, ex.Message);
             }
         }
 
@@ -1626,7 +1614,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             if (psMessage == null) return;
 
             LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, errorString + "\r\n" + psMessage.ToString());
-            ImportantPspLog?.Invoke(this, $"PsWrapper_OnTransactionError. P{psMessage.Number}. AGVL DisConnect");
 
             PrimaryTimeoutQueue.Enqueue(psMessage);
         }
@@ -1643,9 +1630,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             {
                                 Vehicle.IsLocalConnect = false;
                                 LastDisconnectedTimeStamp = DateTime.Now;
-                                string msg = $"PsWrapper connection state changed. [{state}]";
-                                LogPsWrapper(msg);
-                                ImportantPspLog?.Invoke(this, msg);
+                                LogPsWrapper($"PsWrapper connection state changed. [{state}]");
                                 System.Threading.Tasks.Task.Run(() =>
                                 {
                                     SpinWait.SpinUntil(() => Vehicle.IsLocalConnect, Vehicle.AsePackageConfig.DisconnectTimeoutSec * 1000);
@@ -1673,17 +1658,13 @@ namespace Mirle.Agv.AseMiddler.Controller
                     case enumConnectState.Connected:
                         {
                             Vehicle.IsLocalConnect = true;
-                            string msg = $"PsWrapper connection state changed. [{state}]";
-                            LogPsWrapper(msg);
-                            ImportantPspLog?.Invoke(this, msg);
+                            LogPsWrapper($"PsWrapper connection state changed. [{state}]");
                         }
                         break;
                     case enumConnectState.Quit:
                         {
                             Vehicle.IsLocalConnect = false;
-                            string msg = $"PsWrapper connection state changed. [{state}]";
-                            LogPsWrapper(msg);
-                            ImportantPspLog?.Invoke(this, msg);
+                            LogPsWrapper($"PsWrapper connection state changed. [{state}]");
                         }
                         break;
                     default:

@@ -67,6 +67,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         public DateTime StopChargeTimeStamp { get; set; } = DateTime.Now;
         public bool WaitingTransferCompleteEnd { get; set; } = false;
         public string DebugLogMsg { get; set; } = "";
+        public System.Text.StringBuilder SbDebugMsg { get; set; } = new System.Text.StringBuilder(short.MaxValue);
         public LastIdlePosition LastIdlePosition { get; set; } = new LastIdlePosition();
         public bool IsLowPowerStartChargeTimeout { get; set; } = false;
         public bool IsStopChargTimeoutInRobotStep { get; set; } = false;
@@ -238,7 +239,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 //來自MoveControl的移動結束訊息, Send to MainFlow(this)'middleAgent'mapHandler
                 asePackage.OnUpdateSlotStatusEvent += AsePackage_OnUpdateSlotStatusEvent;
                 asePackage.OnModeChangeEvent += AsePackage_OnModeChangeEvent;
-                asePackage.ImportantPspLog += AsePackage_ImportantPspLog;
+                //asePackage.ImportantPspLog += AsePackage_ImportantPspLog;
 
                 //來自IRobotControl的取放貨結束訊息, Send to MainFlow(this)'middleAgent'mapHandler
                 asePackage.OnRobotEndEvent += AsePackage_OnRobotEndEvent;
@@ -251,7 +252,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 asePackage.OnOpPauseOrResumeEvent += AsePackage_OnOpPauseOrResumeEvent;
 
                 asePackage.OnAlarmCodeSetEvent += AsePackage_OnAlarmCodeSetEvent1;
-                asePackage.OnAlarmCodeResetEvent += AsePackage_OnAlarmCodeResetEvent;
+                asePackage.OnAlarmCodeAllResetEvent += AsePackage_OnAlarmCodeResetEvent;
 
                 OnComponentIntialDoneEvent?.Invoke(this, new InitialEventArgs(true, "事件"));
             }
@@ -2581,7 +2582,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     if (Vehicle.MainFlowConfig.IsSimulation)
                     {
-                        SpinWait.SpinUntil(() => false, 100*Vehicle.MainFlowConfig.WatchLowPowerSleepTimeMs);
+                        SpinWait.SpinUntil(() => false, 100 * Vehicle.MainFlowConfig.WatchLowPowerSleepTimeMs);
 
                         continue;
                     }
@@ -2596,7 +2597,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     Vehicle.LowPower = IsBatteryLowerThanHighPower();//200824 dabid+stop
                     Vehicle.VehicleIdle = IsVehicleIdle();//200824 dabid+
 
-                   
+
                     if (Vehicle.AutoState == EnumAutoState.Auto)
                     {
                         if (IsVehicleIdle())
@@ -3697,7 +3698,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
-        private void AsePackage_OnAlarmCodeResetEvent(object sender, int e)
+        private void AsePackage_OnAlarmCodeResetEvent(object sender, EventArgs e)
         {
             ResetAllAlarmsFromAgvl();
         }
@@ -3788,16 +3789,26 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 try
                 {
-                    lock (DebugLogMsg)
-                    {
-                        for (int i = 0; i < 100; i++)
-                        {
-                            DebugLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", DebugLogMsg);
+                    //lock (DebugLogMsg)
+                    //{
+                    //    for (int i = 0; i < 100; i++)
+                    //    {
+                    //        DebugLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", DebugLogMsg);
 
-                            if (DebugLogMsg.Length > 65535)
-                            {
-                                DebugLogMsg = DebugLogMsg.Substring(65535);
-                            }
+                    //        if (DebugLogMsg.Length > 65535)
+                    //        {
+                    //            DebugLogMsg = DebugLogMsg.Substring(65535);
+                    //        }
+                    //    }
+                    //}
+
+
+                    lock (SbDebugMsg)
+                    {
+                        SbDebugMsg.Insert(0, string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, Environment.NewLine));                        
+                        if (SbDebugMsg.Length > 20000)
+                        {
+                            SbDebugMsg.Remove(10000, 10000);
                         }
                     }
                 }

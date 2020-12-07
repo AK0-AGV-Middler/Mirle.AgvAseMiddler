@@ -502,7 +502,7 @@ namespace Mirle.Agv.AseMiddler.View
                 var btn = sender as Button;
                 btn.Enabled = false;
                 asePackage.AllAgvlStatusReportRequest();
-                SpinWait.SpinUntil(()=>false,50);
+                SpinWait.SpinUntil(() => false, 50);
                 btn.Enabled = true;
             }
             catch (Exception ex)
@@ -584,6 +584,8 @@ namespace Mirle.Agv.AseMiddler.View
 
         #endregion
 
+        #region Update UI Tick
+
         private void timeUpdateUI_Tick(object sender, EventArgs e)
         {
             try
@@ -593,31 +595,330 @@ namespace Mirle.Agv.AseMiddler.View
 
                 if (!Vehicle.IsIgnoreAppendDebug)
                 {
-                    tbxDebugLogMsg.Text = mainFlowHandler.DebugLogMsg;
+                    //tbxDebugLogMsg.Text = mainFlowHandler.DebugLogMsg;
+                    tbxDebugLogMsg.Text = mainFlowHandler.SbDebugMsg.ToString();
+                    tbxDebugLogMsg.ScrollToCaret();
                 }
 
-                ucSoc.TagValue = Vehicle.AseBatteryStatus.Percentage.ToString("F1") + $"/" + Vehicle.AseBatteryStatus.Voltage.ToString("F2");
+                switch (tabControl1.SelectedIndex)
+                {
+                    case 0:
+                        UpdateBasicPage();
+                        break;
+                    case 1:
+                        UpdateMovePage();
+                        break;
+                    case 2:
+                        UpdateRobotPage();
+                        break;
+                    case 3:
+                        UpdateBatteryPage();
+                        break;
+                    case 4:
+                        UpdateVehiclePage();
+                        break;
+                    case 5:
+                        UpdateReservePage();
+                        break;
+                    case 6:
+                        UpdateTransferCmdPage();
+                        break;
+                    case 7:
+                        UpdateSimulationPage();
+                        break;
+                    default:
+                        break;
+                }
 
-                UpdateListBoxSections(lbxNeedReserveSections, agvcConnector.GetNeedReserveSections());
-                UpdateListBoxSections(lbxReserveOkSections, agvcConnector.GetReserveOkSections());
 
                 UpdateLoginLevel();
-                UpdateAutoManual();
-                UpdateVehLocation();
-                UpdateBatteryState();
-                UpdateRobotAndCarrierSlotState();
-                UpdateGroupBoxFlowStatus();
-                UpdateTbxAgvcTransCmd();
-                UpdateTbxTransferStep();
-                UpdateLastAlarm();
-                UpdateAgvcConnection();
-                UpdateAgvlConnection();
-                UpdateReserveStopState();
-
+                UpdateVehicleImageInMap();
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
+        private void UpdateSimulationPage()
+        {
+            try
+            {
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
+        private void UpdateTransferCmdPage()
+        {
+            try
+            {
+                var transferCommands = Vehicle.mapTransferCommands.Values.ToList();
+
+                if (transferCommands.Count == 0)
+                {
+                    foreach (var textBox in txtTransferCommands)
+                    {
+                        textBox.Text = "";
+                        textBox.Font = new Font(textBox.Font, FontStyle.Regular);
+                    }
+                    txtTransferCommand01.Text = GetTransferCmdInfo(Vehicle.TransferCommand);
+                    txtTransferCommand01.Font = new Font(txtTransferCommand01.Font, FontStyle.Bold);
+                }
+                else if (transferCommands.Count > 0 && transferCommands.Count < 5)
+                {
+                    foreach (var textBox in txtTransferCommands)
+                    {
+                        textBox.Text = "";
+                        textBox.Font = new Font(textBox.Font, FontStyle.Regular);
+                    }
+                    for (int i = 0; i < transferCommands.Count; i++)
+                    {
+                        txtTransferCommands[i].Text = GetTransferCmdInfo(transferCommands[i]);
+                        if (transferCommands[i].CommandId == Vehicle.TransferCommand.CommandId)
+                            txtTransferCommands[i].Font = new Font(txtTransferCommands[i].Font, FontStyle.Bold);
+                    }
+                }
+                else if (transferCommands.Count > 4)
+                {
+                    foreach (var textBox in txtTransferCommands)
+                    {
+                        textBox.Text = "";
+                        textBox.Font = new Font(textBox.Font, FontStyle.Regular);
+                    }
+                    for (int i = 0; i < 4; i++)
+                    {
+                        txtTransferCommands[i].Text = GetTransferCmdInfo(transferCommands[i]);
+                        if (transferCommands[i].CommandId == Vehicle.TransferCommand.CommandId)
+                            txtTransferCommands[i].Font = new Font(txtTransferCommands[i].Font, FontStyle.Bold);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+
+        }
+
+        private void UpdateReservePage()
+        {
+            try
+            {
+                UpdateListBoxSections(lbxNeedReserveSections, agvcConnector.GetNeedReserveSections());
+                UpdateListBoxSections(lbxReserveOkSections, agvcConnector.GetReserveOkSections());
+
+                var reserveStop = Vehicle.AseMovingGuide.ReserveStop == com.mirle.aka.sc.ProtocolFormat.ase.agvMessage.VhStopSingle.On;
+
+                if (reserveStop)
+                {
+                    lbxNeedReserveSections.ForeColor = Color.OrangeRed;
+                    lbxReserveOkSections.ForeColor = Color.OrangeRed;
+                }
+                else
+                {
+                    lbxNeedReserveSections.ForeColor = Color.GreenYellow;
+                    lbxReserveOkSections.ForeColor = Color.GreenYellow;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+
+        }
+
+        private void UpdateVehiclePage()
+        {
+            try
+            {
+                ucTransferCommandEnrouteState.TagValue = Vehicle.TransferCommand.EnrouteState.ToString();
+                ucTransferCommandTransferStep.TagValue = Vehicle.TransferCommand.TransferStep.ToString();
+
+                #region 200828 dabid for Watch Not AskAllSectionsReserveInOnce
+
+                ucIsAskReservePause.TagValue = agvcConnector.IsAskReservePause.ToString();
+                ucIsMoveStep.TagValue = mainFlowHandler.IsMoveStep().ToString();
+                ucIsMoveEnd.TagValue = Vehicle.AseMoveStatus.IsMoveEnd.ToString();
+                ucIsSleepByAskReserveFail.TagValue = agvcConnector.IsSleepByAskReserveFail.ToString();
+                ucIsHome.TagValue = Vehicle.AseRobotStatus.IsHome.ToString();
+                ucIsCharging.TagValue = Vehicle.IsCharging.ToString();
+
+                string TMP_e = Vehicle.TMP_e;
+                labException.Text = TMP_e;
+                #endregion
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+
+        }
+
+        private void UpdateBatteryPage()
+        {
+            try
+            {
+                bool isCharging = Vehicle.IsCharging;
+                string batteryPercentage = Vehicle.AseBatteryStatus.Percentage.ToString("F1");
+                string batteryVoltage = Vehicle.AseBatteryStatus.Voltage.ToString("F2");
+                string batteryTemperature = Vehicle.AseBatteryStatus.Temperature.ToString("F1");
+
+                ucBatteryCharging.TagValue = isCharging ? "Yes" : "No";
+                ucBatteryCharging.TagColor = isCharging ? Color.LightGreen : Color.Pink;
+                ucBatteryPercentage.TagValue = batteryPercentage;
+                ucBatteryVoltage.TagValue = batteryVoltage;
+                ucBatteryTemperature.TagValue = batteryTemperature;
+
+                #region 200824 dabid for Watch Not AUTO Charge
+                string AutoState = Vehicle.AutoState.ToString();
+                ucAutoState.TagValue = AutoState;
+
+                string IsVehicleIdle = Vehicle.VehicleIdle.ToString();
+                ucIsVehicleIdle.TagValue = IsVehicleIdle;
+
+                string IsLowPower = Vehicle.LowPower.ToString();
+                ucIsLowPower.TagValue = IsLowPower;
+
+                string IsLowPowerStartChargeTimeout = Vehicle.LowPowerStartChargeTimeout.ToString();
+                ucIsLowPowerStartChargeTimeout.TagValue = IsLowPowerStartChargeTimeout;
+
+                string IsArrivalCharge = Vehicle.ArrivalCharge.ToString();
+                ucIsArrivalCharge.TagValue = IsArrivalCharge;
+
+                string IsCharger = Vehicle.IsCharger.ToString();
+                ucIsCharger.TagValue = IsCharger;
+
+                string LastAddress = Vehicle.LastAddress;
+                ucAddress.TagValue = LastAddress;
+
+                string IsSimulation = Vehicle.MainFlowConfig.IsSimulation.ToString();
+                ucIsSimulation.TagValue = IsSimulation;
+
+                ucCurransferStepType.TagValue = Vehicle.TransferCommand.TransferStep.ToString();
+
+                string ChargeCount = Vehicle.LowPowerRepeatedlyChargeCounter.ToString();
+                ucChargeCount.TagValue = ChargeCount;
+                #endregion             
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+
+        }
+
+        private void UpdateRobotPage()
+        {
+            try
+            {
+                AseRobotStatus aseRobotStatus = new AseRobotStatus(Vehicle.AseRobotStatus);
+                AseCarrierSlotStatus slotL = new AseCarrierSlotStatus(Vehicle.AseCarrierSlotL);
+                AseCarrierSlotStatus slotR = new AseCarrierSlotStatus(Vehicle.AseCarrierSlotR);
+
+                ucRobotRobotState.TagValue = aseRobotStatus.RobotState.ToString();
+                ucRobotIsHome.TagValue = aseRobotStatus.IsHome.ToString();
+                ucRobotIsHome.TagColor = aseRobotStatus.IsHome ? Color.Black : Color.OrangeRed;
+                ucRobotSlotLState.TagValue = slotL.CarrierSlotStatus.ToString();
+                ucRobotSlotLId.TagValue = slotL.CarrierId;
+                ucRobotSlotRState.TagValue = slotR.CarrierSlotStatus.ToString();
+                ucRobotSlotRId.TagValue = slotR.CarrierId;
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
+        private void UpdateMovePage()
+        {
+            try
+            {
+                AseMoveStatus aseMoveStatus = new AseMoveStatus(Vehicle.AseMoveStatus);
+                AseMovingGuide aseMovingGuide = new AseMovingGuide(Vehicle.AseMovingGuide);
+
+                var lastPos = aseMoveStatus.LastMapPosition;
+                ucMovePositionX.TagValue = lastPos.X.ToString("F2");
+                ucMovePositionY.TagValue = lastPos.Y.ToString("F2");
+
+                ucMoveLastAddress.TagValue = aseMoveStatus.LastAddress.Id;
+                ucMoveLastSection.TagValue = aseMoveStatus.LastSection.Id;
+                ucMoveIsMoveEnd.TagValue = aseMoveStatus.IsMoveEnd.ToString();
+                ucMoveMoveState.TagValue = aseMoveStatus.AseMoveState.ToString();
+
+                ucMoveReserveStop.TagValue = aseMovingGuide.ReserveStop.ToString();
+                ucMovePauseStop.TagValue = Vehicle.IsPause() ? "Pause" : "Resume";
+                ucMoveMovingIndex.TagValue = aseMovingGuide.MovingSectionsIndex.ToString();
+
+                txtVehiclePauseFlags.Text = JsonConvert.SerializeObject(Vehicle.PauseFlags, Formatting.Indented);
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
+        private void UpdateBasicPage()
+        {
+            try
+            {
+                UpdateBasicPageMove();
+
+                UpdateBasicPageRobot();
+
+                UpdateBasicPageBattery();
+
+                ucCommandCount.TagValue = Vehicle.mapTransferCommands.Count.ToString();
+
+                UpdateGroupBoxFlowStatus();
+
+                UpdateLastAlarm();
+
+                UpdateAutoManual();
+
+                UpdateAgvcConnection();
+
+                UpdateAgvlConnection();
+            }
+            catch (Exception ex)
+            {
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+            }
+        }
+
+        private void UpdateBasicPageRobot()
+        {
+            ucRobotHome.TagValue = Vehicle.AseRobotStatus.IsHome.ToString();
+            ucRobotHome.TagColor = Vehicle.AseRobotStatus.IsHome ? Color.Black : Color.OrangeRed;
+            ucLCstId.TagValue = Vehicle.AseCarrierSlotL.CarrierId;
+            ucRCstId.TagValue = Vehicle.AseCarrierSlotR.CarrierId;
+        }
+
+        private void UpdateBasicPageMove()
+        {
+            AseMoveStatus aseMoveStatus = new AseMoveStatus(Vehicle.AseMoveStatus);
+            var lastPos = aseMoveStatus.LastMapPosition;
+            tstextLastPosX.Text = lastPos.X.ToString("F2");
+            tstextLastPosY.Text = lastPos.Y.ToString("F2");
+            ucMapAddressId.TagValue = aseMoveStatus.LastAddress.Id;
+            ucHeadAngle.TagValue = aseMoveStatus.HeadDirection.ToString();
+        }
+
+        private void UpdateBasicPageBattery()
+        {
+            ucCharging.TagValue = Vehicle.IsCharging ? "Yes" : "No";
+            ucSoc.TagValue = Vehicle.AseBatteryStatus.Percentage.ToString("F1") + $"/" + Vehicle.AseBatteryStatus.Voltage.ToString("F2");
+            if (IsEnableStartChargeButton)
+            {
+                IsEnableStartChargeButton = false;
+                btnCharge.Enabled = true;
+            }
+            if (IsEnableStopChargeButton)
+            {
+                IsEnableStopChargeButton = false;
+                btnStopCharge.Enabled = true;
             }
         }
 
@@ -700,87 +1001,6 @@ namespace Mirle.Agv.AseMiddler.View
             }
         }
 
-        private bool RobotStateError()
-        {
-            var aseRobotStatus = Vehicle.AseRobotStatus;
-            if (aseRobotStatus.RobotState != EnumAseRobotState.Idle)
-            {
-                txtCannotAutoReason.Text = $"Robot State = {aseRobotStatus.RobotState}";
-                txtCannotAutoReason.BackColor = Color.Pink;
-                return true;
-
-            }
-            else if (!aseRobotStatus.IsHome)
-            {
-                txtCannotAutoReason.Text = $"Robot IsHome = {aseRobotStatus.IsHome}";
-                txtCannotAutoReason.BackColor = Color.Pink;
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        private bool MoveStateError()
-        {
-            var moveState = Vehicle.AseMoveStatus.AseMoveState;
-            if (moveState != EnumAseMoveState.Idle && moveState != EnumAseMoveState.Block)
-            {
-                txtCannotAutoReason.Text = $"Move State = {moveState}";
-                txtCannotAutoReason.BackColor = Color.Pink;
-                return true;
-
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        private bool VehicleLocationLost()
-        {
-            if (Vehicle.AseMoveStatus.LastSection == null || string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastSection.Id))
-            {
-                txtCannotAutoReason.Text = "Section Lost";
-                txtCannotAutoReason.BackColor = Color.Pink;
-                return true;
-            }
-            else if (Vehicle.AseMoveStatus.LastAddress == null || string.IsNullOrEmpty(Vehicle.AseMoveStatus.LastAddress.Id))
-            {
-                txtCannotAutoReason.Text = "Address Lost";
-                txtCannotAutoReason.BackColor = Color.Pink;
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        private void UpdateReserveStopState()
-        {
-            try
-            {
-                var reserveStop = Vehicle.AseMovingGuide.ReserveStop == com.mirle.aka.sc.ProtocolFormat.ase.agvMessage.VhStopSingle.On;
-
-                if (reserveStop)
-                {
-                    lbxNeedReserveSections.ForeColor = Color.OrangeRed;
-                    lbxReserveOkSections.ForeColor = Color.OrangeRed;
-                }
-                else
-                {
-                    lbxNeedReserveSections.ForeColor = Color.GreenYellow;
-                    lbxReserveOkSections.ForeColor = Color.GreenYellow;
-                }
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
-        }
-
         public void UpdateAgvcConnection()
         {
             try
@@ -838,72 +1058,6 @@ namespace Mirle.Agv.AseMiddler.View
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-        private void UpdateTbxTransferStep()
-        {
-            try
-            {
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
-        }
-        private void UpdateTbxAgvcTransCmd()
-        {
-            try
-            {
-                ucTransferCommandEnrouteState.TagValue = Vehicle.TransferCommand.EnrouteState.ToString();
-                ucTransferCommandTransferStep.TagValue = Vehicle.TransferCommand.TransferStep.ToString();
-
-                var transferCommands = Vehicle.mapTransferCommands.Values.ToList();
-
-                ucCommandCount.TagValue = transferCommands.Count.ToString();
-
-                if (transferCommands.Count == 0)
-                {
-                    foreach (var textBox in txtTransferCommands)
-                    {
-                        textBox.Text = "";
-                        textBox.Font = new Font(textBox.Font, FontStyle.Regular);
-                    }
-                    txtTransferCommand01.Text = GetTransferCmdInfo(Vehicle.TransferCommand);
-                    txtTransferCommand01.Font = new Font(txtTransferCommand01.Font, FontStyle.Bold);
-                }
-                else if (transferCommands.Count > 0 && transferCommands.Count < 5)
-                {
-                    foreach (var textBox in txtTransferCommands)
-                    {
-                        textBox.Text = "";
-                        textBox.Font = new Font(textBox.Font, FontStyle.Regular);
-                    }
-                    for (int i = 0; i < transferCommands.Count; i++)
-                    {
-                        txtTransferCommands[i].Text = GetTransferCmdInfo(transferCommands[i]);
-                        if (transferCommands[i].CommandId == Vehicle.TransferCommand.CommandId)
-                            txtTransferCommands[i].Font = new Font(txtTransferCommands[i].Font, FontStyle.Bold);
-                    }
-                }
-                else if (transferCommands.Count > 4)
-                {
-                    foreach (var textBox in txtTransferCommands)
-                    {
-                        textBox.Text = "";
-                        textBox.Font = new Font(textBox.Font, FontStyle.Regular);
-                    }
-                    for (int i = 0; i < 4; i++)
-                    {
-                        txtTransferCommands[i].Text = GetTransferCmdInfo(transferCommands[i]);
-                        if (transferCommands[i].CommandId == Vehicle.TransferCommand.CommandId)
-                            txtTransferCommands[i].Font = new Font(txtTransferCommands[i].Font, FontStyle.Bold);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
-        }
-
         private string GetTransferCmdInfo(AgvcTransferCommand transferCommand)
         {
             try
@@ -973,152 +1127,19 @@ namespace Mirle.Agv.AseMiddler.View
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-        private void UpdateVehLocation()
+        private void UpdateVehicleImageInMap()
         {
             try
             {
+                ucVehicleImage.Loading = Vehicle.AseCarrierSlotL.CarrierSlotStatus != EnumAseCarrierSlotStatus.Empty || Vehicle.AseCarrierSlotR.CarrierSlotStatus != EnumAseCarrierSlotStatus.Empty;
+
                 AseMoveStatus aseMoveStatus = new AseMoveStatus(Vehicle.AseMoveStatus);
-                AseMovingGuide aseMovingGuide = new AseMovingGuide(Vehicle.AseMovingGuide);
-
-                var lastPos = aseMoveStatus.LastMapPosition;
-                string lastPosX = lastPos.X.ToString("F2");
-                tstextLastPosX.Text = lastPosX;
-                ucMovePositionX.TagValue = lastPosX;
-                string lastPosY = lastPos.Y.ToString("F2");
-                tstextLastPosY.Text = lastPosY;
-                ucMovePositionY.TagValue = lastPosY;
-
-                var lastAddress = aseMoveStatus.LastAddress;
-                ucMoveLastAddress.TagValue = lastAddress.Id;
-                ucMapAddressId.TagValue = lastAddress.Id;
-
-                var lastSection = aseMoveStatus.LastSection;
-                ucMoveLastSection.TagValue = lastSection.Id;
-
-                ucHeadAngle.TagValue = aseMoveStatus.HeadDirection.ToString();
-
-                ucMoveIsMoveEnd.TagValue = aseMoveStatus.IsMoveEnd.ToString();
-
-                ucMoveMoveState.TagValue = aseMoveStatus.AseMoveState.ToString();
-
-                ucMoveReserveStop.TagValue = aseMovingGuide.ReserveStop.ToString();
-                ucMovePauseStop.TagValue = Vehicle.IsPause() ? "Pause" : "Resume";
-                ucMoveMovingIndex.TagValue = aseMovingGuide.MovingSectionsIndex.ToString();
 
                 ucVehicleImage.Hide();
-                ucVehicleImage.Location = MapPixelExchange(lastPos);
+                ucVehicleImage.Location = MapPixelExchange(aseMoveStatus.LastMapPosition);
                 ucVehicleImage.FixToCenter();
                 ucVehicleImage.Show();
                 ucVehicleImage.BringToFront();
-
-                txtVehiclePauseFlags.Text = JsonConvert.SerializeObject(Vehicle.PauseFlags, Formatting.Indented);
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
-        }
-        private void UpdateBatteryState()
-        {
-            try
-            {
-                bool isCharging = Vehicle.IsCharging;
-                ucCharging.TagValue = isCharging ? "Yes" : "No";
-                ucBatteryCharging.TagValue = isCharging ? "Yes" : "No";
-                ucBatteryCharging.TagColor = isCharging ? Color.LightGreen : Color.Pink;
-                string batteryPercentage = Vehicle.AseBatteryStatus.Percentage.ToString("F1");
-                ucBatteryPercentage.TagValue = batteryPercentage;
-                string batteryVoltage = Vehicle.AseBatteryStatus.Voltage.ToString("F2");
-                ucBatteryVoltage.TagValue = batteryVoltage;
-                string batteryTemperature = Vehicle.AseBatteryStatus.Temperature.ToString("F1");
-                ucBatteryTemperature.TagValue = batteryTemperature;
-                #region 200824 dabid for Watch Not AUTO Charge
-                string AutoState = Vehicle.AutoState.ToString();
-                ucAutoState.TagValue = AutoState;
-
-                string IsVehicleIdle = Vehicle.VehicleIdle.ToString();
-                ucIsVehicleIdle.TagValue = IsVehicleIdle;
-
-                string IsLowPower = Vehicle.LowPower.ToString();
-                ucIsLowPower.TagValue = IsLowPower;
-
-                string IsLowPowerStartChargeTimeout = Vehicle.LowPowerStartChargeTimeout.ToString();
-                ucIsLowPowerStartChargeTimeout.TagValue = IsLowPowerStartChargeTimeout;
-
-                string IsArrivalCharge = Vehicle.ArrivalCharge.ToString();
-                ucIsArrivalCharge.TagValue = IsArrivalCharge;
-
-                string IsCharger = Vehicle.IsCharger.ToString();
-                ucIsCharger.TagValue = IsCharger;
-
-                string LastAddress = Vehicle.LastAddress;
-                ucAddress.TagValue = LastAddress;
-                //string IsCharging = isCharging ? "Yes" : "No";
-                //ucIsCharging.TagValue = isCharging ? "Yes" : "No"; 
-
-                string IsSimulation = Vehicle.MainFlowConfig.IsSimulation.ToString();
-                ucIsSimulation.TagValue = IsSimulation;
-
-                ucCurransferStepType.TagValue = Vehicle.TransferCommand.TransferStep.ToString();
-
-                string ChargeCount = Vehicle.LowPowerRepeatedlyChargeCounter.ToString();
-                ucChargeCount.TagValue = ChargeCount;
-                #endregion
-
-                #region 200828 dabid for Watch Not AskAllSectionsReserveInOnce
-
-                ucIsAskReservePause.TagValue = agvcConnector.IsAskReservePause.ToString();
-                ucIsMoveStep.TagValue = mainFlowHandler.IsMoveStep().ToString();
-                ucIsMoveEnd.TagValue = Vehicle.AseMoveStatus.IsMoveEnd.ToString();
-                ucIsSleepByAskReserveFail.TagValue = agvcConnector.IsSleepByAskReserveFail.ToString();
-                ucIsHome.TagValue = Vehicle.AseRobotStatus.IsHome.ToString();
-                ucIsCharging.TagValue = Vehicle.IsCharging.ToString();
-
-                string TMP_e = Vehicle.TMP_e;
-                labException.Text = TMP_e;
-                #endregion
-
-                if (IsEnableStartChargeButton)
-                {
-                    IsEnableStartChargeButton = false;
-                    btnCharge.Enabled = true;
-                }
-                if (IsEnableStopChargeButton)
-                {
-                    IsEnableStopChargeButton = false;
-                    btnStopCharge.Enabled = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
-        }
-        private void UpdateRobotAndCarrierSlotState()
-        {
-            try
-            {
-                AseRobotStatus aseRobotStatus = new AseRobotStatus(Vehicle.AseRobotStatus);
-                ucRobotRobotState.TagValue = aseRobotStatus.RobotState.ToString();
-                ucRobotIsHome.TagValue = aseRobotStatus.IsHome.ToString();
-                ucRobotIsHome.TagColor = aseRobotStatus.IsHome ? Color.Black : Color.OrangeRed;
-                ucRobotHome.TagValue = aseRobotStatus.IsHome.ToString();
-                ucRobotHome.TagColor = aseRobotStatus.IsHome ? Color.Black : Color.OrangeRed;
-
-                AseCarrierSlotStatus slotL = new AseCarrierSlotStatus(Vehicle.AseCarrierSlotL);
-                AseCarrierSlotStatus slotR = new AseCarrierSlotStatus(Vehicle.AseCarrierSlotR);
-                ucRobotSlotLState.TagValue = slotL.CarrierSlotStatus.ToString();
-                ucRobotSlotLId.TagValue = slotL.CarrierId;
-                ucLCstId.TagValue = slotL.CarrierId;
-
-                ucRobotSlotRState.TagValue = slotR.CarrierSlotStatus.ToString();
-                ucRobotSlotRId.TagValue = slotR.CarrierId;
-                ucRCstId.TagValue = slotR.CarrierId;
-
-                ucVehicleImage.Loading = slotL.CarrierSlotStatus != EnumAseCarrierSlotStatus.Empty || slotR.CarrierSlotStatus != EnumAseCarrierSlotStatus.Empty
-                    ? true
-                    : false;
-
             }
             catch (Exception ex)
             {
@@ -1127,8 +1148,7 @@ namespace Mirle.Agv.AseMiddler.View
         }
         private void UpdatePerformanceCounter(PerformanceCounter performanceCounter, UcLabelTextBox ucLabelTextBox)
         {
-            double value = performanceCounter.NextValue();
-            ucLabelTextBox.TagValue = string.Format("{0:0.0}%", value);
+            //ucLabelTextBox.TagValue = string.Format("{0:0.0}%", (double)performanceCounter.NextValue());
         }
         private void UpdateListBoxSections(ListBox aListBox, List<MapSection> aListOfSections)
         {
@@ -1149,36 +1169,13 @@ namespace Mirle.Agv.AseMiddler.View
             }
         }
 
-        public delegate void RichTextBoxAppendHeadCallback(RichTextBox richTextBox, string msg);
-        public void RichTextBoxAppendHead(RichTextBox richTextBox, string msg)
-        {
-            if (richTextBox.InvokeRequired)
-            {
-                RichTextBoxAppendHeadCallback mydel = new RichTextBoxAppendHeadCallback(RichTextBoxAppendHead);
-                this.Invoke(mydel, new object[] { richTextBox, msg });
-            }
-            else
-            {
-                var timeStamp = DateTime.Now.ToString("[yyyy-MM-dd HH-mm-ss.fff] ");
-                msg = msg + Environment.NewLine;
-                richTextBox.Text = string.Concat(timeStamp, msg, richTextBox.Text);
-
-                int RichTextBoxMaxLines = 10000;  // middlerConfig.RichTextBoxMaxLines;
-
-                if (richTextBox.Lines.Count() > RichTextBoxMaxLines)
-                {
-                    string[] sNewLines = new string[RichTextBoxMaxLines];
-                    Array.Copy(richTextBox.Lines, 0, sNewLines, 0, sNewLines.Length);
-                    richTextBox.Lines = sNewLines;
-                }
-            }
-        }
+        #endregion
 
         private void btnAlarmReset_Click(object sender, EventArgs e)
         {
             btnAlarmReset.Enabled = false;
             mainFlowHandler.ResetAllAlarmsFromAgvm();
-            SpinWait.SpinUntil(()=>false,500);
+            SpinWait.SpinUntil(() => false, 500);
             btnAlarmReset.Enabled = true;
         }
 
@@ -1186,7 +1183,7 @@ namespace Mirle.Agv.AseMiddler.View
         {
             btnAutoManual.Enabled = false;
             SwitchAutoStatus();
-            SpinWait.SpinUntil(()=>false,500);
+            SpinWait.SpinUntil(() => false, 500);
             btnAutoManual.Enabled = true;
         }
 
@@ -1496,7 +1493,7 @@ namespace Mirle.Agv.AseMiddler.View
             {
                 tbxDebugLogMsg.Text = "Ignore Append Debug.";
             }
-            
+
         }
     }
 }
