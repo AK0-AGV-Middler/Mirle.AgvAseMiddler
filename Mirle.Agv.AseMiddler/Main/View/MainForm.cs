@@ -36,7 +36,10 @@ namespace Mirle.Agv.AseMiddler.View
         //PerformanceCounter performanceCounterCpu = new PerformanceCounter("Processor Information", "% Processor Utility", "_Total");
         //PerformanceCounter performanceCounterRam = new PerformanceCounter("Memory", "Available MBytes");
         //PerformanceCounter performanceCounterRam = new PerformanceCounter("Memory", "% Committed Bytes in Use");
-        private MirleLogger mirleLogger = MirleLogger.Instance;
+        //private MirleLogger mirleLogger = MirleLogger.Instance;
+
+        private NLog.Logger _transferLogger = NLog.LogManager.GetLogger("Transfer");
+
         private Vehicle Vehicle = Vehicle.Instance;
         public bool IsEnableStartChargeButton { get; set; } = false;
         public bool IsEnableStopChargeButton { get; set; } = false;
@@ -90,8 +93,9 @@ namespace Mirle.Agv.AseMiddler.View
             btnKeyInSoc.Visible = Vehicle.MainFlowConfig.IsSimulation;
             txtLastAlarm.Text = "";
             txtTransferCommands = new List<TextBox>() { txtTransferCommand01, txtTransferCommand02, txtTransferCommand03, txtTransferCommand04 };
-            var msg = "MainForm : 讀取主畫面";
-            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+            //var msg = "MainForm : 讀取主畫面";
+            //LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, msg);
+            _transferLogger.Debug($"[{GetType().Name + ":" + MethodBase.GetCurrentMethod().Name}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][Main Form Load 讀取主畫面]");
         }
 
         private void InitialDisableSlotCheckBox()
@@ -148,7 +152,7 @@ namespace Mirle.Agv.AseMiddler.View
             tstextClientName.Text = $"[{ middlerConfig.ClientName}]";
             tstextRemoteIp.Text = $"[{middlerConfig.RemoteIp}]";
             tstextRemotePort.Text = $"[{middlerConfig.RemotePort}]";
-            this.Text = $"主畫面 版本編號為[{Application.ProductVersion}]";
+            this.Text = $"主畫面 版本編號為[{Assembly.GetExecutingAssembly().GetName().Version}]";
 
             alarmForm = new AlarmForm(mainFlowHandler);
             alarmForm.WindowState = FormWindowState.Normal;
@@ -1352,13 +1356,14 @@ namespace Mirle.Agv.AseMiddler.View
 
         private void LogException(string classMethodName, string exMsg)
         {
-            mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
+            //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
+            _transferLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
         }
 
-        private void LogDebug(string classMethodName, string msg)
-        {
-            mirleLogger.Log(new LogFormat("Debug", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
-        }
+        //private void LogDebug(string classMethodName, string msg)
+        //{
+        //    mirleLogger.Log(new LogFormat("Debug", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
+        //}
 
         private void checkBoxDisableSlot_CheckedChanged(object sender, EventArgs e)
         {

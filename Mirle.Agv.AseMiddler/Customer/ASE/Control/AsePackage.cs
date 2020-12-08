@@ -16,10 +16,15 @@ namespace Mirle.Agv.AseMiddler.Controller
     public class AsePackage
     {
         public PSWrapperXClass psWrapper;
-        public MirleLogger mirleLogger = MirleLogger.Instance;
+        //public MirleLogger mirleLogger = MirleLogger.Instance;
+
+        private NLog.Logger _psWrapperLogger = NLog.LogManager.GetLogger("PsWrapper");
+
         public Dictionary<string, PSMessageXClass> psMessageMap = new Dictionary<string, PSMessageXClass>();
         public Vehicle Vehicle { get; set; } = Vehicle.Instance;
-        public string LocalLogMsg { get; set; } = "";
+        //public string LocalLogMsg { get; set; } = "";
+        public System.Text.StringBuilder SbPsWrapperMsg { get; set; } = new System.Text.StringBuilder(short.MaxValue);
+
         public string MoveStopResult { get; set; } = "";
         public RobotCommand RobotCommand { get; set; }
         public DateTime LastDisconnectedTimeStamp { get; set; } = DateTime.Now;
@@ -1900,11 +1905,20 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                LocalLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", msg, "\r\n", LocalLogMsg);
+                //LocalLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", msg, "\r\n", LocalLogMsg);
 
-                if (LocalLogMsg.Length > 65535)
+                //if (LocalLogMsg.Length > 65535)
+                //{
+                //    LocalLogMsg = LocalLogMsg.Substring(65535);
+                //}
+
+                lock (SbPsWrapperMsg)
                 {
-                    LocalLogMsg = LocalLogMsg.Substring(65535);
+                    SbPsWrapperMsg.Insert(0, string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, Environment.NewLine));
+                    if (SbPsWrapperMsg.Length > 20000)
+                    {
+                        SbPsWrapperMsg.Remove(10000, 10000);
+                    }
                 }
             }
             catch (Exception ex)
@@ -1915,12 +1929,16 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void LogException(string classMethodName, string exMsg)
         {
-            mirleLogger.Log(new LogFormat("Error", "5", classMethodName, "Device", "CarrierID", exMsg));
+            //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, "Device", "CarrierID", exMsg));
+            _psWrapperLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
+
         }
 
         public void LogPsWrapper(string msg)
         {
-            mirleLogger.Log(new LogFormat("PsWrapper", "5", "AsePackage", Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
+            //mirleLogger.Log(new LogFormat("PsWrapper", "5", "AsePackage", Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
+            _psWrapperLogger.Debug($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{msg}]");
+
             AppendPspLogMsg(msg);
         }
 

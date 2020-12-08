@@ -29,7 +29,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         #region Controller
 
         public AgvcConnector agvcConnector;
-        public MirleLogger mirleLogger = null;
+        //public MirleLogger mirleLogger = null;
         public AlarmHandler alarmHandler;
         public MapHandler mapHandler;
         public AsePackage asePackage;
@@ -74,6 +74,8 @@ namespace Mirle.Agv.AseMiddler.Controller
         public DateTime LowPowerStartChargeTimeStamp { get; set; } = DateTime.Now;
         public int LowPowerRepeatedlyChargeCounter { get; set; } = 0;
         public bool IsStopCharging { get; set; } = false;
+
+        public System.Timers.Timer TimerStopChargeInLastRobotStep { get; set; } = new System.Timers.Timer() { AutoReset = false };
 
         #endregion
 
@@ -171,15 +173,15 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                string loggerConfigPath = "Log.ini";
-                if (File.Exists(loggerConfigPath))
-                {
-                    mirleLogger = MirleLogger.Instance;
-                }
-                else
-                {
-                    throw new Exception();
-                }
+                //string loggerConfigPath = "Log.ini";
+                //if (File.Exists(loggerConfigPath))
+                //{
+                //    mirleLogger = MirleLogger.Instance;
+                //}
+                //else
+                //{
+                //    throw new Exception();
+                //}
 
                 OnComponentIntialDoneEvent?.Invoke(this, new InitialEventArgs(true, "紀錄器"));
             }
@@ -213,6 +215,11 @@ namespace Mirle.Agv.AseMiddler.Controller
             try
             {
                 IsFirstAhGet = Vehicle.MainFlowConfig.IsSimulation;
+
+                if (Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec > 0)
+                {
+                    TimerStopChargeInLastRobotStep.Interval = Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec * 1000;
+                }
 
                 OnComponentIntialDoneEvent?.Invoke(this, new InitialEventArgs(true, "台車"));
             }
@@ -254,6 +261,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                 asePackage.OnAlarmCodeSetEvent += AsePackage_OnAlarmCodeSetEvent1;
                 asePackage.OnAlarmCodeAllResetEvent += AsePackage_OnAlarmCodeResetEvent;
 
+                TimerStopChargeInLastRobotStep.Elapsed += TimerStopChargeInLastRobotStep_Elapsed;
+
                 OnComponentIntialDoneEvent?.Invoke(this, new InitialEventArgs(true, "事件"));
             }
             catch (Exception ex)
@@ -264,6 +273,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
+
 
         private void VehicleLocationInitialAndThreadsInitial()
         {
@@ -1307,7 +1317,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 if (!Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod)
                 {
-                    CheckTimerStopChargeInRobotStep();
+                    CheckStopChargeInLastRobotStep();
                 }
 
                 if (Vehicle.MainFlowConfig.IsSimulation)
@@ -1717,7 +1727,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             agvcConnector.ReportNonSendWaitUnloadArrival();
             agvcConnector.Unloading();
 
-            CheckTimerStopChargeInRobotStep();
+            CheckStopChargeInLastRobotStep();
         }
 
         private bool IsNotUnableToLoadBySlotFull(AgvcTransferCommand x)
@@ -1836,7 +1846,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[執行.放貨] : Unloading, [Direction{unloadCmd.PioDirection}][SlotNum={unloadCmd.SlotNumber}][Unload Adr={unloadCmd.PortAddressId}][Unload Port Num={unloadCmd.PortNumber}][PortId = {Vehicle.TransferCommand.UnloadPortId}]");
             agvcConnector.Unloading();
 
-            CheckTimerStopChargeInRobotStep();
+            CheckStopChargeInLastRobotStep();
             return unloadCmd;
         }
 
@@ -1865,21 +1875,21 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
-        private void CheckTimerStopChargeInRobotStep()
+        private void CheckStopChargeInLastRobotStep()
         {
             try
             {
                 var otherCommands = Vehicle.mapTransferCommands.Values.Where(x => x.CommandId.Trim() != Vehicle.TransferCommand.CommandId.Trim()).ToList();
                 if (!otherCommands.Any())
                 {
-                    TimerStopChargeInRobotStep();
+                    StartTimerToStopChargeInRobotStep();
                 }
                 else
                 {
                     var sameAddressCommands = otherCommands.Where(x => x.EnrouteAddressId() == Vehicle.AseMoveStatus.LastAddress.Id).ToList();
                     if (!sameAddressCommands.Any())
                     {
-                        TimerStopChargeInRobotStep();
+                        StartTimerToStopChargeInRobotStep();
                     }
                 }
             }
@@ -1889,23 +1899,36 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
-        private void TimerStopChargeInRobotStep()
+        private void StartTimerToStopChargeInRobotStep()
         {
             try
             {
-                Task.Run(() =>
+                if (!TimerStopChargeInLastRobotStep.Enabled && Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec > 0)
                 {
-                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[手臂命令.提早斷充] : ChargeIntervalInRobotingSec [ChargeTimeSec = {Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec}].");
+                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[手臂命令.提早斷充] : StartTimerToStopChargeInRobotStep [ChargeTimeSec = {Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec}].");
 
-                    SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec);
+                    TimerStopChargeInLastRobotStep.Start();
+                }
 
-                    StopCharge();
-                });
+                //Task.Run(() =>
+                //{
+                //    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[手臂命令.提早斷充] : ChargeIntervalInRobotingSec [ChargeTimeSec = {Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec}].");
+
+                //    SpinWait.SpinUntil(() => false, Vehicle.MainFlowConfig.ChargeIntervalInRobotingSec);
+
+                //    StopCharge();
+                //});
             }
             catch (Exception ex)
             {
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
+        }
+
+        private void TimerStopChargeInLastRobotStep_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[手臂命令.提早斷充] : TimerStopChargeInLastRobotStep_Elapsed.");
+            StopCharge();
         }
 
         private UnloadCmdInfo GetUnloadCommand()
@@ -2816,6 +2839,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                 lock (_StartOrStopChargeLocker)
                 {
                     LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $@"[斷充.開始] Try STOP charge.[IsCharging = {Vehicle.IsCharging}][AddressIsCharger={Vehicle.AseMoveStatus.LastAddress.IsCharger()}]");
+
+                    TimerStopChargeInLastRobotStep.Stop();
 
                     if (Vehicle.AseMoveStatus.LastAddress.IsCharger() || Vehicle.IsCharging)
                     {
@@ -3805,7 +3830,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                     lock (SbDebugMsg)
                     {
-                        SbDebugMsg.Insert(0, string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, Environment.NewLine));                        
+                        SbDebugMsg.Insert(0, string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, Environment.NewLine));
                         if (SbDebugMsg.Length > 20000)
                         {
                             SbDebugMsg.Remove(10000, 10000);
@@ -3819,11 +3844,16 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
+        private NLog.Logger _transferLogger = NLog.LogManager.GetLogger("Transfer");
+
+
         private void LogException(string classMethodName, string exMsg)
         {
             try
             {
-                mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
+                //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
+                _transferLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
+
             }
             catch (Exception) { }
         }
@@ -3832,7 +3862,9 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                mirleLogger.Log(new LogFormat("Debug", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
+                //mirleLogger.Log(new LogFormat("Debug", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
+                _transferLogger.Debug($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{msg}]");
+
                 AppendDebugLog(msg);
             }
             catch (Exception) { }

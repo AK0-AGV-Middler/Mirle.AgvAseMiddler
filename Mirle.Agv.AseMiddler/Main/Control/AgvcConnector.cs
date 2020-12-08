@@ -29,7 +29,9 @@ namespace Mirle.Agv.AseMiddler.Controller
         #endregion
 
         private Vehicle Vehicle { get; set; } = Vehicle.Instance;
-        private MirleLogger mirleLogger = MirleLogger.Instance;
+        //private MirleLogger mirleLogger = MirleLogger.Instance;
+        private NLog.Logger _commandListLogger = NLog.LogManager.GetLogger("CommandList");
+        private NLog.Logger _communicateLogger = NLog.LogManager.GetLogger("Comm");
         private MainFlowHandler mainFlowHandler;
 
         private ConcurrentQueue<MapSection> quePartMoveSections = new ConcurrentQueue<MapSection>();
@@ -52,7 +54,8 @@ namespace Mirle.Agv.AseMiddler.Controller
         public TcpIpAgent ClientAgent { get; private set; }
         public string AgvcConnectorAbnormalMsg { get; set; } = "";
         public bool IsAgvcReplyBcrRead { get; set; } = false;
-        public string CommLogMsg { get; set; } = "";
+        //public string CommLogMsg { get; set; } = "";
+        public System.Text.StringBuilder SbCommMsg { get; set; } = new System.Text.StringBuilder(short.MaxValue);
 
         public AgvcConnector(MainFlowHandler mainFlowHandler)
         {
@@ -2411,7 +2414,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 report.DirectionAngle = Vehicle.AseMoveStatus.MovingDirection;
                 report.VehicleAngle = Vehicle.AseMoveStatus.HeadDirection;
 
-                mirleLogger.Log(new LogFormat("Info", "5", GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "Device", "CarrierID", $"Angle=[{aseMoveStatus.MovingDirection}]"));
+                //mirleLogger.Log(new LogFormat("Info", "5", GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "Device", "CarrierID", $"Angle=[{aseMoveStatus.MovingDirection}]"));
 
                 WrapperMessage wrapper = new WrapperMessage();
                 wrapper.ID = WrapperMessage.TransEventRepFieldNumber;
@@ -2873,13 +2876,22 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 try
                 {
-                    lock (CommLogMsg)
-                    {
-                        CommLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", CommLogMsg);
+                    //lock (CommLogMsg)
+                    //{
+                    //    CommLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", CommLogMsg);
 
-                        if (CommLogMsg.Length > 65535)
+                    //    if (CommLogMsg.Length > 65535)
+                    //    {
+                    //        CommLogMsg = CommLogMsg.Substring(65535);
+                    //    }
+                    //}
+
+                    lock (SbCommMsg)
+                    {
+                        SbCommMsg.Insert(0, string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, Environment.NewLine));
+                        if (SbCommMsg.Length > 20000)
                         {
-                            CommLogMsg = CommLogMsg.Substring(65535);
+                            SbCommMsg.Remove(10000, 10000);
                         }
                     }
                 }
@@ -2894,30 +2906,33 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
+                //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
+                _communicateLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
             }
             catch (Exception) { }
         }
 
         private void LogComm(string classMethodName, string msg)
         {
-            mirleLogger.Log(new LogFormat("Comm", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
+            // mirleLogger.Log(new LogFormat("Comm", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
+            _communicateLogger.Debug($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{msg}]");
             AppendCommLog(msg);
         }
 
         public void LogCommandList(string msg)
         {
-            mirleLogger.LogString("CommandList", msg);
+            //mirleLogger.LogString("CommandList", msg);
+            _commandListLogger.Debug(msg);
         }
 
         public void LogCommandStart(ID_31_TRANS_REQUEST request)
         {
-            LogCommandList($@"[Start][Type = {request.CommandAction.ToString()}, CmdID = {request.CmdID}, CstID = {request.CSTID}, load = {request.LoadAdr}, loadPort = {request.LoadPortID}, loadGate = {request.IsLoadPortHasGate.ToString()}, unload = {request.DestinationAdr}, unloadPort = {request.UnloadPortID}, unloadGate = {request.IsUnloadPortHasGate}]");
+            LogCommandList($@"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][Start][Type = {request.CommandAction.ToString()}, CmdID = {request.CmdID}, CstID = {request.CSTID}, load = {request.LoadAdr}, loadPort = {request.LoadPortID}, loadGate = {request.IsLoadPortHasGate.ToString()}, unload = {request.DestinationAdr}, unloadPort = {request.UnloadPortID}, unloadGate = {request.IsUnloadPortHasGate}]");
         }
 
         public void LogCommandEnd(ID_132_TRANS_COMPLETE_REPORT report)
         {
-            LogCommandList($@"[End][Type = {report.CmpStatus.ToString()}, CmdID = {report.CmdID}, CstID = {report.CSTID}, section = {report.CurrentSecID}, address = {report.CurrentAdrID}, X = {report.XAxis.ToString()}, Y = {report.YAxis.ToString()}]");
+            LogCommandList($@"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][End][Type = {report.CmpStatus.ToString()}, CmdID = {report.CmdID}, CstID = {report.CSTID}, section = {report.CurrentSecID}, address = {report.CurrentAdrID}, X = {report.XAxis.ToString()}, Y = {report.YAxis.ToString()}]");
         }
 
         #endregion

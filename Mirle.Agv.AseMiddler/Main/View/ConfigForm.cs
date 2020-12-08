@@ -44,9 +44,12 @@ namespace Mirle.Agv.AseMiddler.View
             this.Hide();
         }
 
-        private void LogException(string source, string exMsg)
+        private NLog.Logger _transferLogger = NLog.LogManager.GetLogger("Transfer");
+
+        private void LogException(string classMethodName, string exMsg)
         {
-            MirleLogger.Instance.Log(new LogFormat("Error", "5", source, "Device", "CarrierID", exMsg));
+            //MirleLogger.Instance.Log(new LogFormat("Error", "5", source, "Device", "CarrierID", exMsg));
+            _transferLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
         }
 
         private void btnLoadConfig_Click(object sender, EventArgs e)
