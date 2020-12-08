@@ -128,11 +128,6 @@ namespace Mirle.Agv.AseMiddler.Model
             }
         }
 
-        protected void LogException(string source, string exMsg)
-        {
-            MirleLogger.Instance.Log(new LogFormat("Error", "5", source, "Device", "CarrierID", exMsg));
-        }
-
         public bool IsAbortByAgvc()
         {
             switch (CompleteStatus)

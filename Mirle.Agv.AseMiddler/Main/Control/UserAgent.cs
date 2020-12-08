@@ -8,7 +8,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 {
     public class UserAgent
     {
-        public MirleLogger mirleLogger = MirleLogger.Instance;
+        //public MirleLogger mirleLogger = MirleLogger.Instance;
         private string UserIniFilePath { get; set; } = @"User.ini";
         public Dictionary<string, string> UserPasswordMap { get; set; } = new Dictionary<string, string>();
 
@@ -73,10 +73,14 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
+        private NLog.Logger _transferLogger = NLog.LogManager.GetLogger("Transfer");
+
 
         private void LogException(string classMethodName, string exMsg)
         {
-            mirleLogger.Log(new LogFormat("Error", "5", classMethodName, "Device", "CarrierID", exMsg));
+            //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, "Device", "CarrierID", exMsg));
+
+            _transferLogger.Error($"[{classMethodName}][{Model.Vehicle.Instance.SoftwareVersion}][{Model.Vehicle.Instance.AgvcConnectorConfig.ClientName}][{exMsg}]");
         }
 
     }

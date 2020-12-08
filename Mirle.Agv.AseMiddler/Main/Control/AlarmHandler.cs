@@ -21,13 +21,20 @@ namespace Mirle.Agv.AseMiddler.Controller
         public Dictionary<int, Alarm> allAlarms = new Dictionary<int, Alarm>();
         public ConcurrentDictionary<int, Alarm> dicHappeningAlarms = new ConcurrentDictionary<int, Alarm>();
         public string LastAlarmMsg { get; set; } = "";
+
+        public System.Text.StringBuilder SbAlarmMsg { get; set; } = new System.Text.StringBuilder(short.MaxValue);
+        public System.Text.StringBuilder SbAlarmHistoryMsg { get; set; } = new System.Text.StringBuilder(short.MaxValue);
+
         #endregion     
 
-        private MirleLogger mirleLogger = MirleLogger.Instance;
+        //private MirleLogger mirleLogger = MirleLogger.Instance;
         public Vehicle Vehicle { get; set; } = Vehicle.Instance;
 
-        public string AlarmLogMsg { get; set; } = "";
-        public string AlarmHistoryLogMsg { get; set; } = "";
+        private NLog.Logger _alarmHistoryLogger = NLog.LogManager.GetLogger("AlarmHistory");
+
+
+        //public string AlarmLogMsg { get; set; } = "";
+        //public string AlarmHistoryLogMsg { get; set; } = "";
 
         public AlarmHandler()
         {
@@ -40,9 +47,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 if (string.IsNullOrEmpty(Vehicle.AlarmConfig.AlarmFileName))
                 {
-                    mirleLogger.Log(new LogFormat("Error", "5", GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "Device", "CarrierID"
-                        , $"string.IsNullOrEmpty(alarmConfig.AlarmFileName)={string.IsNullOrEmpty(Vehicle.AlarmConfig.AlarmFileName)}"));
-                    return;
+                    throw new Exception($"string.IsNullOrEmpty(alarmConfig.AlarmFileName)={string.IsNullOrEmpty(Vehicle.AlarmConfig.AlarmFileName)}");
                 }
 
                 string alarmFullPath = Path.Combine(Environment.CurrentDirectory, Vehicle.AlarmConfig.AlarmFileName);
@@ -52,9 +57,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 string[] allRows = File.ReadAllLines(alarmFullPath);
                 if (allRows == null || allRows.Length < 2)
                 {
-                    mirleLogger.Log(new LogFormat("Error", "5", GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "Device", "CarrierID"
-                        , "There are no alarms in file"));
-                    return;
+                    throw new Exception("There are no alarms in file");
                 }
 
                 string[] titleRow = allRows[0].Split(',');
@@ -88,12 +91,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                     allAlarms.Add(oneRow.Id, oneRow);
                 }
 
-                mirleLogger.Log(new LogFormat("Debug", "5", GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "Device", "CarrierID"
-                     , "Load Alarm File Ok"));
+                NLog.Logger _transferlogger = NLog.LogManager.GetLogger("Transfer");
+                _transferlogger.Debug($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}]Load Alarm File Ok");
+                //mirleLogger.Log(new LogFormat("Debug", "5", GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "Device", "CarrierID"
+                //     , "Load Alarm File Ok"));
             }
             catch (Exception ex)
             {
-                mirleLogger.Log(new LogFormat("Error", "5", GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "Device", "CarrierID", ex.Message));
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
 
@@ -115,7 +120,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
             catch (Exception ex)
             {
-                mirleLogger.Log(new LogFormat("Error", "5", GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, "Device", "CarrierID", ex.Message));
+                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
 
@@ -132,7 +137,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 string resetMessage = "Reset All Alarms.";
                 LogAlarmHistory(resetMessage);
                 AppendAlarmHistoryLogMsg(resetMessage);
-                AlarmLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", resetMessage);
+                //AlarmLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", resetMessage);
             }
             catch (Exception ex)
             {
@@ -159,9 +164,9 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                string msg = $"{alarm.Id},{alarm.AlarmText},{alarm.Level},{alarm.SetTime},{alarm.ResetTime},{alarm.Description}";
+                //mirleLogger.LogString("AlarmHistory", msg);
 
-                mirleLogger.LogString("AlarmHistory", msg);
+                _alarmHistoryLogger.Error($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{alarm.Id},{alarm.AlarmText},{alarm.Level},{alarm.SetTime},{alarm.ResetTime},{alarm.Description}]");
             }
             catch (Exception ex)
             {
@@ -173,9 +178,10 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                string timeStamp = DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff");
+                //mirleLogger.LogString("AlarmHistory", msg);
 
-                mirleLogger.LogString("AlarmHistory", msg);
+                _alarmHistoryLogger.Error($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{msg}]");
+
             }
             catch (Exception ex)
             {
@@ -208,11 +214,19 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                AlarmLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", msg, "\r\n", AlarmLogMsg);
+                //AlarmLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", msg, "\r\n", AlarmLogMsg);
 
-                if (AlarmLogMsg.Length > 65535)
+                //if (AlarmLogMsg.Length > 65535)
+                //{
+                //    AlarmLogMsg = AlarmLogMsg.Substring(65535);
+                //}
+                lock (SbAlarmMsg)
                 {
-                    AlarmLogMsg = AlarmLogMsg.Substring(65535);
+                    SbAlarmMsg.Append(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff")).Append("\t").Append(msg).Append(Environment.NewLine);
+                    if (SbAlarmMsg.Length > 20000)
+                    {
+                        SbAlarmMsg.Remove(10000, 10000);
+                    }
                 }
             }
             catch (Exception ex)
@@ -225,11 +239,20 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                AlarmHistoryLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", msg, "\r\n", AlarmHistoryLogMsg);
+                //AlarmHistoryLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", msg, "\r\n", AlarmHistoryLogMsg);
 
-                if (AlarmHistoryLogMsg.Length > 65535)
+                //if (AlarmHistoryLogMsg.Length > 65535)
+                //{
+                //    AlarmHistoryLogMsg = AlarmHistoryLogMsg.Substring(65535);
+                //}
+
+                lock (SbAlarmHistoryMsg)
                 {
-                    AlarmHistoryLogMsg = AlarmHistoryLogMsg.Substring(65535);
+                    SbAlarmHistoryMsg.Append(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff")).Append("\t").Append(msg).Append(Environment.NewLine);
+                    if (SbAlarmHistoryMsg.Length > 20000)
+                    {
+                        SbAlarmHistoryMsg.Remove(10000, 10000);
+                    }
                 }
             }
             catch (Exception ex)
@@ -240,7 +263,9 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void LogException(string classMethodName, string exMsg)
         {
-            mirleLogger.Log(new LogFormat("Error", "5", classMethodName, "Device", "CarrierID", exMsg));
+            //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, "Device", "CarrierID", exMsg));
+
+            _alarmHistoryLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
         }
 
     }

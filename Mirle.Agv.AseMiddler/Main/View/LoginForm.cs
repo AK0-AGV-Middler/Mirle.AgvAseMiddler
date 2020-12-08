@@ -18,7 +18,8 @@ namespace Mirle.Agv.AseMiddler.View
     {
         private UserAgent userAgent;
         private Vehicle Vehicle { get; set; } = Vehicle.Instance;
-        private MirleLogger mirleLogger = MirleLogger.Instance;
+        //private MirleLogger mirleLogger = MirleLogger.Instance;
+        private NLog.Logger _transferLogger = NLog.LogManager.GetLogger("Transfer");
 
         public LoginForm(UserAgent userAgent)
         {
@@ -63,7 +64,8 @@ namespace Mirle.Agv.AseMiddler.View
 
         private void LogException(string classMethodName, string exMsg)
         {
-            mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
+            //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
+            _transferLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
         }
 
         private void btnHide_Click(object sender, EventArgs e)
