@@ -334,6 +334,7 @@
     <Content Include="Resource\AlarmForm.ico" />
     <Content Include="Resource\CommuForm.ico" />
     <Content Include="Resource\MainForm.ico" />
+    <None Include="Resource\Mirle_Logo2.png" />
     <Content Include="Resource\VehHasCarrier.ico" />
     <Content Include="VehHasCarrier.ico" />
     <None Include="Resource\VehHasNoCarrier.jpg" />
