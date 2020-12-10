@@ -3851,8 +3851,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
-                _transferLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
+                _transferLogger.Error($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{classMethodName}][{exMsg}]");
 
             }
             catch (Exception) { }
@@ -3862,8 +3861,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                //mirleLogger.Log(new LogFormat("Debug", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
-                _transferLogger.Debug($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{msg}]");
+                _transferLogger.Debug($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{classMethodName}][{msg}]");
 
                 AppendDebugLog(msg);
             }

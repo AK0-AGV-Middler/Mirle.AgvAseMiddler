@@ -503,7 +503,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     catch (Exception ex)//200828 dabid for Watch Not AskAllSectionsReserveInOnce
                     {
                         LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-                        Vehicle.TMP_e = ex.Message;
+                        //Vehicle.TMP_e = ex.Message;
                     }
                 }
 
@@ -2906,16 +2906,14 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
-                _communicateLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
+                _communicateLogger.Error($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{classMethodName}][{exMsg}]");
             }
             catch (Exception) { }
         }
 
         private void LogComm(string classMethodName, string msg)
         {
-            // mirleLogger.Log(new LogFormat("Comm", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
-            _communicateLogger.Debug($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{msg}]");
+            _communicateLogger.Debug($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{classMethodName}][{msg}]");
             AppendCommLog(msg);
         }
 

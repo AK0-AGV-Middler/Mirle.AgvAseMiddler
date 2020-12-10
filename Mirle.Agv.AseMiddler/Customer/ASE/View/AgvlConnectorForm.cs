@@ -504,9 +504,7 @@ namespace Mirle.Agv.AseMiddler.View
 
         private void LogException(string classMethodName, string exMsg)
         {
-            //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, deviceID, "CarrierID", exMsg));
-
-            _PsWrapperLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
+            _PsWrapperLogger.Error($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{classMethodName}][{exMsg}]");
 
         }
     }

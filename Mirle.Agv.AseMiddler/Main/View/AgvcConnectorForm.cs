@@ -309,9 +309,7 @@ namespace Mirle.Agv.AseMiddler.View
 
         private void LogException(string classMethodName, string exMsg)
         {
-            //MirleLogger.Instance.Log(new LogFormat("Error", "5", classMethodName, "Device", "CarrierID", exMsg));
-
-            _CommLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
+            _CommLogger.Error($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{classMethodName}][{exMsg}]");
         }
     }
 }

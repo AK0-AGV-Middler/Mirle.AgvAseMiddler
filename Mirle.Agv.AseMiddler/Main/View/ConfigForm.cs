@@ -48,8 +48,7 @@ namespace Mirle.Agv.AseMiddler.View
 
         private void LogException(string classMethodName, string exMsg)
         {
-            //MirleLogger.Instance.Log(new LogFormat("Error", "5", source, "Device", "CarrierID", exMsg));
-            _transferLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
+            _transferLogger.Error($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{classMethodName}][{exMsg}]");
         }
 
         private void btnLoadConfig_Click(object sender, EventArgs e)

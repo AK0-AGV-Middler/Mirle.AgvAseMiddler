@@ -45,7 +45,7 @@ namespace Mirle.Agv.AseMiddler.Model
         //public bool TMP_IsHome { get; set; } = false;
         //public bool TMP_IsCharging { get; set; } = false;
         //public bool TMP_IsSendWaitSchedulePause { get; set; } = false;
-        public string TMP_e { get; set; } = "NONE";
+        //public string TMP_e { get; set; } = "NONE";
         #endregion
         #region AsePackage
 

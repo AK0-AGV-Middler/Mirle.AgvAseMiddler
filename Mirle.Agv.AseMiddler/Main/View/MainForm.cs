@@ -750,8 +750,8 @@ namespace Mirle.Agv.AseMiddler.View
                 ucIsHome.TagValue = Vehicle.AseRobotStatus.IsHome.ToString();
                 ucIsCharging.TagValue = Vehicle.IsCharging.ToString();
 
-                string TMP_e = Vehicle.TMP_e;
-                labException.Text = TMP_e;
+                //string TMP_e = Vehicle.TMP_e;
+                //labException.Text = TMP_e;
                 #endregion
             }
             catch (Exception ex)
@@ -777,34 +777,27 @@ namespace Mirle.Agv.AseMiddler.View
                 ucBatteryTemperature.TagValue = batteryTemperature;
 
                 #region 200824 dabid for Watch Not AUTO Charge
-                string AutoState = Vehicle.AutoState.ToString();
-                ucAutoState.TagValue = AutoState;
 
-                string IsVehicleIdle = Vehicle.VehicleIdle.ToString();
-                ucIsVehicleIdle.TagValue = IsVehicleIdle;
+                ucAutoState.TagValue = Vehicle.AutoState.ToString();
 
-                string IsLowPower = Vehicle.LowPower.ToString();
-                ucIsLowPower.TagValue = IsLowPower;
+                ucIsVehicleIdle.TagValue = Vehicle.VehicleIdle.ToString();
 
-                string IsLowPowerStartChargeTimeout = Vehicle.LowPowerStartChargeTimeout.ToString();
-                ucIsLowPowerStartChargeTimeout.TagValue = IsLowPowerStartChargeTimeout;
+                ucIsLowPower.TagValue = Vehicle.LowPower.ToString();
 
-                string IsArrivalCharge = Vehicle.ArrivalCharge.ToString();
-                ucIsArrivalCharge.TagValue = IsArrivalCharge;
+                ucIsLowPowerStartChargeTimeout.TagValue = Vehicle.LowPowerStartChargeTimeout.ToString();
 
-                string IsCharger = Vehicle.IsCharger.ToString();
-                ucIsCharger.TagValue = IsCharger;
+                ucIsArrivalCharge.TagValue = Vehicle.ArrivalCharge.ToString();
 
-                string LastAddress = Vehicle.LastAddress;
-                ucAddress.TagValue = LastAddress;
+                ucIsCharger.TagValue = Vehicle.IsCharger.ToString();
 
-                string IsSimulation = Vehicle.MainFlowConfig.IsSimulation.ToString();
-                ucIsSimulation.TagValue = IsSimulation;
+                ucAddress.TagValue = Vehicle.LastAddress;
+
+                ucIsSimulation.TagValue = Vehicle.MainFlowConfig.IsSimulation.ToString();
 
                 ucCurransferStepType.TagValue = Vehicle.TransferCommand.TransferStep.ToString();
 
-                string ChargeCount = Vehicle.LowPowerRepeatedlyChargeCounter.ToString();
-                ucChargeCount.TagValue = ChargeCount;
+                ucChargeCount.TagValue = Vehicle.LowPowerRepeatedlyChargeCounter.ToString();
+
                 #endregion             
             }
             catch (Exception ex)
@@ -1356,14 +1349,8 @@ namespace Mirle.Agv.AseMiddler.View
 
         private void LogException(string classMethodName, string exMsg)
         {
-            //mirleLogger.Log(new LogFormat("Error", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", exMsg));
-            _transferLogger.Error($"[{classMethodName}][{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{exMsg}]");
+            _transferLogger.Error($"[{Vehicle.SoftwareVersion}][{Vehicle.AgvcConnectorConfig.ClientName}][{classMethodName}][{exMsg}]");
         }
-
-        //private void LogDebug(string classMethodName, string msg)
-        //{
-        //    mirleLogger.Log(new LogFormat("Debug", "5", classMethodName, Vehicle.AgvcConnectorConfig.ClientName, "CarrierID", msg));
-        //}
 
         private void checkBoxDisableSlot_CheckedChanged(object sender, EventArgs e)
         {
