@@ -34,5 +34,6 @@ namespace Mirle.Agv.AseMiddler.Model.Configs
         public bool AgreeAgvcSetCoupler { get; set; } = true;
         public bool IsE84Continue { get; set; } = false;
         public bool IsEqPortOrderOptimize { get; set; } = true;
+        public int StringBuilderMax { get; set; } = 1500;
     }
 }

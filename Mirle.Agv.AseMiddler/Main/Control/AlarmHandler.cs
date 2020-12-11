@@ -214,19 +214,16 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                //AlarmLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", msg, "\r\n", AlarmLogMsg);
+                int th = Vehicle.MainFlowConfig.StringBuilderMax;
+                int thHalf = th / 2;
 
-                //if (AlarmLogMsg.Length > 65535)
-                //{
-                //    AlarmLogMsg = AlarmLogMsg.Substring(65535);
-                //}
                 lock (SbAlarmMsg)
                 {
-                    SbAlarmMsg.Append(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff")).Append("\t").Append(msg).Append(Environment.NewLine);
-                    if (SbAlarmMsg.Length > 20000)
+                    if (SbAlarmMsg.Length + msg.Length > th)
                     {
-                        SbAlarmMsg.Remove(10000, 10000);
+                        SbAlarmMsg.Remove(0, thHalf);
                     }
+                    SbAlarmMsg.AppendLine($"{DateTime.Now:HH:mm:ss} {msg}");
                 }
             }
             catch (Exception ex)
@@ -239,20 +236,16 @@ namespace Mirle.Agv.AseMiddler.Controller
         {
             try
             {
-                //AlarmHistoryLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", msg, "\r\n", AlarmHistoryLogMsg);
-
-                //if (AlarmHistoryLogMsg.Length > 65535)
-                //{
-                //    AlarmHistoryLogMsg = AlarmHistoryLogMsg.Substring(65535);
-                //}
+                int th = Vehicle.MainFlowConfig.StringBuilderMax;
+                int thHalf = th / 2;
 
                 lock (SbAlarmHistoryMsg)
                 {
-                    SbAlarmHistoryMsg.Append(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff")).Append("\t").Append(msg).Append(Environment.NewLine);
-                    if (SbAlarmHistoryMsg.Length > 20000)
+                    if (SbAlarmHistoryMsg.Length + msg.Length > th)
                     {
-                        SbAlarmHistoryMsg.Remove(10000, 10000);
+                        SbAlarmHistoryMsg.Remove(0, thHalf);
                     }
+                    SbAlarmHistoryMsg.AppendLine($"{DateTime.Now:HH:mm:ss} {msg}");
                 }
             }
             catch (Exception ex)

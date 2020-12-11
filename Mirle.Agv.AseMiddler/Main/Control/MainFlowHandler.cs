@@ -299,7 +299,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 StartTrackPosition();
                 StartWatchChargeStage();
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"讀取到的電量為{Vehicle.BatteryLog.InitialSoc}");
-
             }
             catch (Exception ex)
             {
@@ -3814,27 +3813,16 @@ namespace Mirle.Agv.AseMiddler.Controller
             {
                 try
                 {
-                    //lock (DebugLogMsg)
-                    //{
-                    //    for (int i = 0; i < 100; i++)
-                    //    {
-                    //        DebugLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", DebugLogMsg);
-
-                    //        if (DebugLogMsg.Length > 65535)
-                    //        {
-                    //            DebugLogMsg = DebugLogMsg.Substring(65535);
-                    //        }
-                    //    }
-                    //}
-
+                    int th = Vehicle.MainFlowConfig.StringBuilderMax;
+                    int thHalf = th / 2;
 
                     lock (SbDebugMsg)
                     {
-                        SbDebugMsg.Insert(0, string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, Environment.NewLine));
-                        if (SbDebugMsg.Length > 20000)
+                        if (SbDebugMsg.Length + msg.Length > th)
                         {
-                            SbDebugMsg.Remove(10000, 10000);
+                            SbDebugMsg.Remove(0, thHalf);
                         }
+                        SbDebugMsg.AppendLine($"{DateTime.Now:HH:mm:ss} {msg}");                  
                     }
                 }
                 catch (Exception ex)

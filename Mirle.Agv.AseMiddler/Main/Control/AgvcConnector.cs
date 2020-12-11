@@ -2875,24 +2875,17 @@ namespace Mirle.Agv.AseMiddler.Controller
             if (!Vehicle.IsIgnoreAppendDebug)
             {
                 try
-                {
-                    //lock (CommLogMsg)
-                    //{
-                    //    CommLogMsg = string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, "\r\n", CommLogMsg);
-
-                    //    if (CommLogMsg.Length > 65535)
-                    //    {
-                    //        CommLogMsg = CommLogMsg.Substring(65535);
-                    //    }
-                    //}
+                {                 
+                    int th = Vehicle.MainFlowConfig.StringBuilderMax;
+                    int thHalf = th / 2;
 
                     lock (SbCommMsg)
                     {
-                        SbCommMsg.Insert(0, string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, Environment.NewLine));
-                        if (SbCommMsg.Length > 20000)
+                        if (SbCommMsg.Length + msg.Length > th)
                         {
-                            SbCommMsg.Remove(10000, 10000);
+                            SbCommMsg.Remove(0, thHalf);
                         }
+                        SbCommMsg.AppendLine($"{DateTime.Now:HH:mm:ss} {msg}");
                     }
                 }
                 catch (Exception ex)
@@ -2919,7 +2912,6 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         public void LogCommandList(string msg)
         {
-            //mirleLogger.LogString("CommandList", msg);
             _commandListLogger.Debug(msg);
         }
 

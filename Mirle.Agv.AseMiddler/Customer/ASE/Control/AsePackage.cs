@@ -1904,14 +1904,17 @@ namespace Mirle.Agv.AseMiddler.Controller
         public void AppendPspLogMsg(string msg)
         {
             try
-            {
+            {               
+                int th = Vehicle.MainFlowConfig.StringBuilderMax;
+                int thHalf = th / 2;
+
                 lock (SbPsWrapperMsg)
                 {
-                    SbPsWrapperMsg.Insert(0, string.Concat(DateTime.Now.ToString("HH:mm:ss.fff"), "  ", msg, Environment.NewLine));
-                    if (SbPsWrapperMsg.Length > 20000)
+                    if (SbPsWrapperMsg.Length + msg.Length > th)
                     {
-                        SbPsWrapperMsg.Remove(10000, 10000);
+                        SbPsWrapperMsg.Remove(0, thHalf);
                     }
+                    SbPsWrapperMsg.AppendLine($"{DateTime.Now:HH:mm:ss} {msg}");
                 }
             }
             catch (Exception ex)
