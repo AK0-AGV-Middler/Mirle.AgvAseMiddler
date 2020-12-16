@@ -528,7 +528,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                             if (returnCode == TrxTcpIp.ReturnCode.Normal)
                             {
-                                if (!Vehicle.mapTransferCommands.ContainsKey(response.CmdID.Trim())) break;
+                                if (!Vehicle.TransferCommandsBuffer.ContainsKey(response.CmdID.Trim())) break;
                                 ReceiveSent_Cmd36_TransferEventResponse(response, scheduleWrapper.Wrapper.ImpTransEventRep);
                             }
                             else
@@ -1722,7 +1722,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             report.DirectionAngle = aseMoveStatus.MovingDirection;
             report.VehicleAngle = aseMoveStatus.HeadDirection;
 
-            List<AgvcTransferCommand> transferCommands = Vehicle.mapTransferCommands.Values.ToList();
+            List<AgvcTransferCommand> transferCommands = Vehicle.TransferCommandsBuffer.Values.ToList();
             report.CmdId1 = transferCommands.Count > 0 ? transferCommands[0].CommandId : "";
             report.CmsState1 = transferCommands.Count > 0 ? transferCommands[0].EnrouteState : CommandState.None;
             report.CmdId2 = transferCommands.Count > 1 ? transferCommands[1].CommandId : "";
@@ -1823,7 +1823,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 response.SecDistance = (uint)aseMoveStatus.LastSection.VehicleDistanceSinceHead;
                 response.DrivingDirection = DriveDirctionParse(aseMoveStatus.LastSection.CmdDirection);
 
-                List<AgvcTransferCommand> transferCommands = Vehicle.mapTransferCommands.Values.ToList();
+                List<AgvcTransferCommand> transferCommands = Vehicle.TransferCommandsBuffer.Values.ToList();
                 response.CmdId1 = transferCommands.Count > 0 ? transferCommands[0].CommandId : "";
                 response.CmsState1 = transferCommands.Count > 0 ? transferCommands[0].EnrouteState : CommandState.None;
                 response.CmdId2 = transferCommands.Count > 1 ? transferCommands[1].CommandId : "";
@@ -1998,14 +1998,14 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 //throw new Exception($"AgvcConnector : AGVL can not Cancel or Abort now.");
 
-                if (Vehicle.mapTransferCommands.Count == 0)
+                if (Vehicle.TransferCommandsBuffer.Count == 0)
                 {
                     throw new Exception($"Vehicle Idle, reject [{receive.CancelAction}].");
                 }
 
                 var cmdId = receive.CmdID.Trim();
 
-                if (!Vehicle.mapTransferCommands.ContainsKey(cmdId))
+                if (!Vehicle.TransferCommandsBuffer.ContainsKey(cmdId))
                 {
                     throw new Exception($"No [{cmdId}] to cancel, reject [{receive.CancelAction}].");
                 }
@@ -2145,9 +2145,9 @@ namespace Mirle.Agv.AseMiddler.Controller
                                     mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨失敗.放棄命令] Load fail, [ReplyAction = {response.ReplyAction}][RenameCarrierID = {response.RenameCarrierID}]");
 
                                     mainFlowHandler.ResetAllAlarmsFromAgvm();
-                                    if (Vehicle.mapTransferCommands.ContainsKey(report.CmdID))
+                                    if (Vehicle.TransferCommandsBuffer.ContainsKey(report.CmdID))
                                     {
-                                        var cmd = Vehicle.mapTransferCommands[report.CmdID];
+                                        var cmd = Vehicle.TransferCommandsBuffer[report.CmdID];
                                         if (!string.IsNullOrEmpty(response.RenameCarrierID))
                                         {
                                             cmd.CassetteId = response.RenameCarrierID;
@@ -2173,9 +2173,9 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 else
                                 {
                                     mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨階段.BcrRead.上報.完成] Load Complete and BcrReadReplyOk");
-                                    if (Vehicle.mapTransferCommands.ContainsKey(report.CmdID))
+                                    if (Vehicle.TransferCommandsBuffer.ContainsKey(report.CmdID))
                                     {
-                                        var cmd = Vehicle.mapTransferCommands[report.CmdID];
+                                        var cmd = Vehicle.TransferCommandsBuffer[report.CmdID];
                                         if (!string.IsNullOrEmpty(response.RenameCarrierID))
                                         {
                                             cmd.CassetteId = response.RenameCarrierID;
@@ -2484,7 +2484,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 ID_31_TRANS_REQUEST transRequest = (ID_31_TRANS_REQUEST)e.objPacket;
                 mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[收到搬送命令] Get Transfer Command: {transRequest.CommandAction}");
                 LogCommandStart(transRequest);
-                if (Vehicle.mapTransferCommands.ContainsKey(transRequest.CmdID.Trim()))
+                if (Vehicle.TransferCommandsBuffer.ContainsKey(transRequest.CmdID.Trim()))
                 {
                     mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[拒絕搬送命令] Reject Transfer Command: {transRequest.CommandAction}. Same command id is working.");
                     Send_Cmd131_TransferResponse(transRequest.CmdID, transRequest.CommandAction, e.iSeqNum, (int)EnumAgvcReplyCode.Unknow, "Unknow command.");

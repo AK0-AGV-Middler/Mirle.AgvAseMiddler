@@ -659,7 +659,7 @@ namespace Mirle.Agv.AseMiddler.View
         {
             try
             {
-                var transferCommands = Vehicle.mapTransferCommands.Values.ToList();
+                var transferCommands = Vehicle.TransferCommandsBuffer.Values.ToList();
 
                 if (transferCommands.Count == 0)
                 {
@@ -867,7 +867,7 @@ namespace Mirle.Agv.AseMiddler.View
 
                 UpdateBasicPageBattery();
 
-                ucCommandCount.TagValue = Vehicle.mapTransferCommands.Count.ToString();
+                ucCommandCount.TagValue = Vehicle.TransferCommandsBuffer.Count.ToString();
 
                 UpdateGroupBoxFlowStatus();
 
