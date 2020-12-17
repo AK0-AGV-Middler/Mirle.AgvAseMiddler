@@ -296,7 +296,10 @@ namespace Mirle.Agv.AseMiddler.View
                 toolStripStatusLabel1.Text = Vehicle.IsAgvcConnect ? " Connect " : " Dis-Connect ";
                 if (!Vehicle.IsIgnoreAppendDebug)
                 {
-                    tbxCommLogMsg.Text = agvcConnector.SbCommMsg.ToString();
+                    lock (agvcConnector.SbCommMsg)
+                    {
+                        tbxCommLogMsg.Text = agvcConnector.SbCommMsg.ToString();
+                    }                   
                 }               
             }
             catch (Exception ex)

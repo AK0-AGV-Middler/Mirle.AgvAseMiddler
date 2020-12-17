@@ -134,7 +134,10 @@ namespace Mirle.Agv.AseMiddler.View
             UpdateMovePage();
             UpdateRobotPage();
             UpdateChargePage();
-            textBox1.Text = asePackage.SbPsWrapperMsg.ToString();
+            lock (asePackage.SbPsWrapperMsg)
+            {
+                textBox1.Text = asePackage.SbPsWrapperMsg.ToString();
+            }            
         }
 
         private void UpdateRobotPage()

@@ -33,8 +33,15 @@ namespace Mirle.Agv.AseMiddler.View
 
         private void timeUpdateUI_Tick(object sender, EventArgs e)
         {
-            tbxHappendingAlarms.Text = alarmHandler.SbAlarmMsg.ToString();
-            tbxHistoryAlarms.Text = alarmHandler.SbAlarmHistoryMsg.ToString();
+            lock (alarmHandler.SbAlarmMsg)
+            {
+                tbxHappendingAlarms.Text = alarmHandler.SbAlarmMsg.ToString();
+            }
+            lock (alarmHandler.SbAlarmHistoryMsg)
+            {
+                tbxHistoryAlarms.Text = alarmHandler.SbAlarmHistoryMsg.ToString();
+            }
+           
         }
     }
 }
