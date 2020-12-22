@@ -600,7 +600,10 @@ namespace Mirle.Agv.AseMiddler.View
                 if (!Vehicle.IsIgnoreAppendDebug)
                 {
                     //tbxDebugLogMsg.Text = mainFlowHandler.DebugLogMsg;
-                    tbxDebugLogMsg.Text = mainFlowHandler.SbDebugMsg.ToString();
+                    lock (mainFlowHandler.SbDebugMsg)
+                    {
+                        tbxDebugLogMsg.Text = mainFlowHandler.SbDebugMsg.ToString();
+                    }                   
                     tbxDebugLogMsg.ScrollToCaret();
                 }
 
