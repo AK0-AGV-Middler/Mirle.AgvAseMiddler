@@ -687,7 +687,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                                     {
                                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[二次定位.右開蓋] Move end. Open slot right.");
                                     }
-                                }                               
+                                }
                                 break;
                         }
                     }
@@ -747,7 +747,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[二次定位.右開蓋] Move end. Open slot right.");
                                         asePackage.PartMove(EnumAseMoveCommandIsEnd.End, EnumSlotSelect.Right);
                                     }
-                                }                               
+                                }
                                 break;
                         }
                     }
@@ -1097,13 +1097,12 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-
         private bool CheckE84Continue()
         {
             if (!Vehicle.MainFlowConfig.IsE84Continue) return false;
 
             try
-            {     
+            {
                 //find same port load
 
                 if (SlotIsFull()) return false;
@@ -1124,7 +1123,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 return false;
             }
         }
-
         private void CombineE84ContinueTransferCommands(AgvcTransferCommand loadTransferCommand, AgvcTransferCommand unloadTransferCommand)
         {
             loadTransferCommand.IsE84ContinueLoadAndUnlaod = true;
@@ -1134,7 +1132,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             unloadTransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
             Vehicle.TransferCommand = loadTransferCommand;
         }
-
         private bool InTheSameAgvStation(string portId, string addressId)
         {
             if (string.IsNullOrEmpty(portId)) return false;
@@ -1154,7 +1151,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 return false;
             }
         }
-
         private void AvoidMoveComplete()
         {
             try
@@ -1764,6 +1760,13 @@ namespace Mirle.Agv.AseMiddler.Controller
                     }
                 }
 
+                if (CheckE84Continue())
+                {
+                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] CheckE84Continue success.[{Vehicle.TransferCommand.CommandId}][{Vehicle.TransferCommand.E84ContinueCommandId}]");
+
+                    return;
+                }
+
                 var transferCommands = Vehicle.TransferCommandsBuffer.Values.ToArray();
 
                 foreach (var transferCommand in transferCommands)
@@ -2318,6 +2321,13 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                     if (Vehicle.TransferCommandsBuffer.Count > 1)
                     {
+                        if (CheckE84Continue())
+                        {
+                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] CheckE84Continue success.[{Vehicle.TransferCommand.CommandId}][{Vehicle.TransferCommand.E84ContinueCommandId}]");
+
+                            return;
+                        }
+
                         var transferCommands = Vehicle.TransferCommandsBuffer.Values.ToArray();
 
                         foreach (var transferCommand in transferCommands)
@@ -2597,17 +2607,16 @@ namespace Mirle.Agv.AseMiddler.Controller
 
         private void CheckEnoughSamePortTypeCommandsFromPortId(AgvcTransferCommand transferCommand, CommandState enroute)
         {
-            //var isAgvStation = IsAgvStationFromPortId(transferCommand,enroute);
-
             if (IsAgvStationFromPortId(transferCommand, enroute))
-            {
-                var samePortTypeCommands = (from command in Vehicle.TransferCommandsBuffer.Values.ToArray()
-                                            where IsAgvStationFromPortId(command, enroute) /*== isAgvStation*/
-                                            select (command)).ToList();
+            {                
+                var sameAgvSationSameEnrouteCommands = (from command in Vehicle.TransferCommandsBuffer.Values.ToArray()
+                                                 where command.EnrouteState == enroute
+                                                 where IsAgvStationFromPortId(command,enroute)
+                                                 select (command)).ToList();
 
-                if (samePortTypeCommands.Count >= 2)
+                if (sameAgvSationSameEnrouteCommands.Count >= 2)
                 {
-                    throw new Exception($"Vehicle has no enough slot to transfer. [SamePortTypeCommands={samePortTypeCommands.Count}][enroute={enroute}]");
+                    throw new Exception($"Vehicle has no enough slot to transfer. [SamePortTypeCommands={sameAgvSationSameEnrouteCommands.Count}][enroute={enroute}]");
                 }
             }
         }
