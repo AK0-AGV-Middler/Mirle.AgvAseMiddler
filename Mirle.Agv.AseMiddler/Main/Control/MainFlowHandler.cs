@@ -784,82 +784,82 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-        private bool CheckUnloadEnrouteBindSamePortLoad()
-        {
-            var unloadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId];
-            var agvStation = Vehicle.Mapinfo.agvStationMap[unloadPort.AgvStationId];
-            foreach (var transferCommand in Vehicle.TransferCommandsBuffer.Values.ToArray())
-            {
-                if (transferCommand.EnrouteState == CommandState.LoadEnroute)
-                {
-                    if (agvStation.IsInThisAgvStationForPortId(transferCommand.LoadPortId))
-                    {
-                        if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Left)
-                        {
-                            Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-                            transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
-                            Vehicle.TransferCommand = transferCommand;
+        //private bool CheckUnloadEnrouteBindSamePortLoad()
+        //{
+        //    var unloadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId];
+        //    var agvStation = Vehicle.Mapinfo.agvStationMap[unloadPort.AgvStationId];
+        //    foreach (var transferCommand in Vehicle.TransferCommandsBuffer.Values.ToArray())
+        //    {
+        //        if (transferCommand.EnrouteState == CommandState.LoadEnroute)
+        //        {
+        //            if (agvStation.IsInThisAgvStationForPortId(transferCommand.LoadPortId))
+        //            {
+        //                if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Left)
+        //                {
+        //                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+        //                    transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+        //                    Vehicle.TransferCommand = transferCommand;
 
-                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定.左開蓋] Check unload enroute bind same port load. Open slot left.");
-                            return true;
-                        }
-                        else if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Right)
-                        {
-                            Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-                            transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
-                            Vehicle.TransferCommand = transferCommand;
+        //                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定.左開蓋] Check unload enroute bind same port load. Open slot left.");
+        //                    return true;
+        //                }
+        //                else if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Right)
+        //                {
+        //                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
+        //                    transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
+        //                    Vehicle.TransferCommand = transferCommand;
 
-                            LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定.右開蓋] Check unload enroute bind same port load. Open slot right.");
-                            return true;
-                        }
-                    }
-                }
-            }
+        //                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定.右開蓋] Check unload enroute bind same port load. Open slot right.");
+        //                    return true;
+        //                }
+        //            }
+        //        }
+        //    }
 
-            return false;
-        }
-        private void CheckLoadEnrouteBindSamePortUnload()
-        {
-            try
-            {
-                if (Vehicle.MainFlowConfig.IsE84Continue)
-                {
-                    if (string.IsNullOrEmpty(Vehicle.TransferCommand.LoadPortId))
-                    {
-                        throw new Exception("CheckLoadEnrouteBindSamePortUnload fail. Vehicle.TransferCommand.LoadPortId is empty");
-                    }
-                    if (!Vehicle.Mapinfo.portMap.ContainsKey(Vehicle.TransferCommand.LoadPortId.Trim()))
-                    {
-                        throw new Exception($"CheckLoadEnrouteBindSamePortUnload fail. !Vehicle.Mapinfo.portMap.ContainsKey {Vehicle.TransferCommand.LoadPortId}");
-                    }
-                    var loadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.LoadPortId.Trim()];
-                    if (loadPort.IsAgvStationPort())
-                    {
-                        var agvStation = Vehicle.Mapinfo.agvStationMap[loadPort.AgvStationId];
-                        foreach (var transferCommand in Vehicle.TransferCommandsBuffer.Values.ToArray())
-                        {
-                            if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
-                            {
-                                var unloadPort = Vehicle.Mapinfo.portMap[transferCommand.UnloadPortId];
-                                if (unloadPort.IsVitualPort)
-                                {
-                                    if (agvStation.IsInThisAgvStationForPortId(unloadPort.ID))
-                                    {
-                                        CombineE84ContinueTransferCommands(Vehicle.TransferCommand, transferCommand);
-                                        LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] Load enroute bind same port unload.[{transferCommand.CommandId}]");
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
-        }
+        //    return false;
+        //}
+        //private void CheckLoadEnrouteBindSamePortUnload()
+        //{
+        //    try
+        //    {
+        //        if (Vehicle.MainFlowConfig.IsE84Continue)
+        //        {
+        //            if (string.IsNullOrEmpty(Vehicle.TransferCommand.LoadPortId))
+        //            {
+        //                throw new Exception("CheckLoadEnrouteBindSamePortUnload fail. Vehicle.TransferCommand.LoadPortId is empty");
+        //            }
+        //            if (!Vehicle.Mapinfo.portMap.ContainsKey(Vehicle.TransferCommand.LoadPortId.Trim()))
+        //            {
+        //                throw new Exception($"CheckLoadEnrouteBindSamePortUnload fail. !Vehicle.Mapinfo.portMap.ContainsKey {Vehicle.TransferCommand.LoadPortId}");
+        //            }
+        //            var loadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.LoadPortId.Trim()];
+        //            if (loadPort.IsAgvStationPort())
+        //            {
+        //                var agvStation = Vehicle.Mapinfo.agvStationMap[loadPort.AgvStationId];
+        //                foreach (var transferCommand in Vehicle.TransferCommandsBuffer.Values.ToArray())
+        //                {
+        //                    if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
+        //                    {
+        //                        var unloadPort = Vehicle.Mapinfo.portMap[transferCommand.UnloadPortId];
+        //                        if (unloadPort.IsVitualPort)
+        //                        {
+        //                            if (agvStation.IsInThisAgvStationForPortId(unloadPort.ID))
+        //                            {
+        //                                CombineE84ContinueTransferCommands(Vehicle.TransferCommand, transferCommand);
+        //                                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] Load enroute bind same port unload.[{transferCommand.CommandId}]");
+        //                                break;
+        //                            }
+        //                        }
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
+        //    }
+        //}
         private void VehicleSlotFullFindFitUnloadCommand()
         {
             Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToLoad;
@@ -1121,11 +1121,11 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 if (SlotIsFull()) return false;
 
-                var loadTransferCommand = Vehicle.TransferCommandsBuffer.Values.First(cmd => cmd.EnrouteState == CommandState.LoadEnroute && InTheSameAgvStation(cmd.LoadPortId, Vehicle.AseMoveStatus.LastAddress.Id));
+                var loadTransferCommand = Vehicle.TransferCommandsBuffer.Values.First(loadCommand => loadCommand.EnrouteState == CommandState.LoadEnroute && InTheSameAgvStation(loadCommand.LoadPortId, Vehicle.AseMoveStatus.LastAddress.Id));
 
                 if (loadTransferCommand.IsE84ContinueLoadAndUnlaod) return false;
 
-                var unloadTransferCommand = Vehicle.TransferCommandsBuffer.Values.First(cmd => cmd.EnrouteState == CommandState.UnloadEnroute && InTheSameAgvStation(cmd.UnloadPortId, Vehicle.AseMoveStatus.LastAddress.Id) && IsAgvStationFromPortId(cmd, cmd.EnrouteState));
+                var unloadTransferCommand = Vehicle.TransferCommandsBuffer.Values.First(unloadCommand => unloadCommand.EnrouteState == CommandState.UnloadEnroute && InTheSameAgvStation(unloadCommand.UnloadPortId, Vehicle.AseMoveStatus.LastAddress.Id));
 
                 CombineE84ContinueTransferCommands(loadTransferCommand, unloadTransferCommand);
 
@@ -2321,8 +2321,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             try
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[命令完成.命令選擇] TransferCompleteOptimize");
-
-                bool isEqEnd = IsEqFromAddressId(Vehicle.AseMoveStatus.LastAddress.Id);
 
                 if (!Vehicle.TransferCommandsBuffer.IsEmpty)
                 {
