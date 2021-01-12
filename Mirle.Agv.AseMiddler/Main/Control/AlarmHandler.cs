@@ -137,6 +137,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 string resetMessage = "Reset All Alarms.";
                 LogAlarmHistory(resetMessage);
                 AppendAlarmHistoryLogMsg(resetMessage);
+                SbAlarmMsg.Clear();
                 //AlarmLogMsg = string.Concat(DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss.fff"), "\t", resetMessage);
             }
             catch (Exception ex)
