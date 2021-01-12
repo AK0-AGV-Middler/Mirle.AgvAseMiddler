@@ -72,6 +72,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     var keyword = titleRow[i].Trim();
                     if (!string.IsNullOrWhiteSpace(keyword))
                     {
+                        keyword = keyword.ToUpper();
                         dicAlarmIndexes.Add(keyword, i);
                     }
                 }
@@ -80,13 +81,13 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     string[] getThisRow = allRows[i].Split(',');
                     Alarm oneRow = new Alarm();
-                    oneRow.Id = int.Parse(getThisRow[dicAlarmIndexes["Id"]]);
-                    oneRow.AlarmText = getThisRow[dicAlarmIndexes["AlarmText"]];
-                    if (Enum.TryParse(getThisRow[dicAlarmIndexes["Level"]], out EnumAlarmLevel level))
+                    oneRow.Id = int.Parse(getThisRow[dicAlarmIndexes["ID"]]);
+                    oneRow.AlarmText = getThisRow[dicAlarmIndexes["ALARMTEXT"]];
+                    if (Enum.TryParse(getThisRow[dicAlarmIndexes["LEVEL"]], out EnumAlarmLevel level))
                     {
                         oneRow.Level = level;
                     }
-                    oneRow.Description = getThisRow[dicAlarmIndexes["Description"]];
+                    oneRow.Description = getThisRow[dicAlarmIndexes["DESCRIPTION"]];
 
                     allAlarms.Add(oneRow.Id, oneRow);
                 }
