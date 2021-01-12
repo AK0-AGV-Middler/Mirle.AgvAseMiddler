@@ -274,7 +274,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
-
         private void VehicleLocationInitialAndThreadsInitial()
         {
             try
@@ -368,6 +367,11 @@ namespace Mirle.Agv.AseMiddler.Controller
                             MoveToAddress(Vehicle.AseMovingGuide.ToAddressId, EnumMoveToEndReference.Avoid);
                             break;
                         case EnumTransferStep.MoveToAvoidWaitArrival:
+                            if (Vehicle.TransferCommand.IsCanceled)
+                            {
+                                Vehicle.TransferCommand.IsStopAndClear = true;
+                                return;
+                            }
                             if (Vehicle.AseMoveStatus.IsMoveEnd)
                             {
                                 MoveToAddressEnd();
@@ -384,10 +388,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                             AvoidMoveComplete();
                             break;
                         case EnumTransferStep.MoveToAddressWaitArrival:
+                            if (Vehicle.TransferCommand.IsCanceled)
+                            {
+                                Vehicle.TransferCommand.IsStopAndClear = true;
+                                return;
+                            }
                             if (Vehicle.TransferCommand.SendWaitTimeout)
                             {
                                 Vehicle.TransferCommand.IsStopAndClear = true;
-
                             }
                             else if (Vehicle.AseMoveStatus.IsMoveEnd)
                             {
@@ -399,6 +407,11 @@ namespace Mirle.Agv.AseMiddler.Controller
                             }
                             break;
                         case EnumTransferStep.WaitMoveArrivalVitualPortReply:
+                            if (Vehicle.TransferCommand.IsCanceled)
+                            {
+                                Vehicle.TransferCommand.IsStopAndClear = true;
+                                return;
+                            }
                             if (Vehicle.TransferCommand.SendWaitTimeout)
                             {
                                 Vehicle.TransferCommand.IsStopAndClear = true;
@@ -1029,7 +1042,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     if (Vehicle.TransferCommand.IsCanceled)
                     {
-                        Vehicle.TransferCommand.TransferStep = EnumTransferStep.TransferComplete;
+                        Vehicle.TransferCommand.IsStopAndClear = true;
+                        return;
                     }
                     else if (Vehicle.AseMovingGuide.IsAvoidMove)
                     {
@@ -2608,11 +2622,11 @@ namespace Mirle.Agv.AseMiddler.Controller
         private void CheckEnoughSamePortTypeCommandsFromPortId(AgvcTransferCommand transferCommand, CommandState enroute)
         {
             if (IsAgvStationFromPortId(transferCommand, enroute))
-            {                
+            {
                 var sameAgvSationSameEnrouteCommands = (from command in Vehicle.TransferCommandsBuffer.Values.ToArray()
-                                                 where command.EnrouteState == enroute
-                                                 where IsAgvStationFromPortId(command,enroute)
-                                                 select (command)).ToList();
+                                                        where command.EnrouteState == enroute
+                                                        where IsAgvStationFromPortId(command, enroute)
+                                                        select (command)).ToList();
 
                 if (sameAgvSationSameEnrouteCommands.Count >= 2)
                 {
@@ -3438,11 +3452,10 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             string abortCmdId = receive.CmdID.Trim();
             bool IsAbortCurCommand = Vehicle.TransferCommand.CommandId == abortCmdId;
-            var targetAbortCmd = Vehicle.TransferCommandsBuffer[abortCmdId];
 
             if (IsAbortCurCommand)
             {
-                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放棄.當前.命令] TransferComplete [{targetAbortCmd.CompleteStatus}].");
+                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放棄.當前.命令] TransferComplete [ID={abortCmdId}].");
 
                 CheckCanAbortCommand();
 
@@ -3450,21 +3463,21 @@ namespace Mirle.Agv.AseMiddler.Controller
                 //asePackage.MoveStop();
                 Vehicle.AseMovingGuide = new AseMovingGuide();
                 Vehicle.TransferCommand.CompleteStatus = GetCompleteStatusFromCancelRequest(receive.CancelAction);
-                //Vehicle.TransferCommand.TransferStep = EnumTransferStep.TransferComplete;
                 Vehicle.TransferCommand.IsCanceled = true;
             }
             else
             {
-                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放棄.背景.命令] TransferComplete [{targetAbortCmd.CompleteStatus}].");
+                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[放棄.背景.命令] TransferComplete [ID={abortCmdId}].");
 
                 WaitingTransferCompleteEnd = true;
 
-                targetAbortCmd.TransferStep = EnumTransferStep.Abort;
-                targetAbortCmd.CompleteStatus = GetCompleteStatusFromCancelRequest(receive.CancelAction);
+                Vehicle.TransferCommandsBuffer.TryRemove(abortCmdId, out AgvcTransferCommand abortTransferCommand);
 
-                Vehicle.TransferCommandsBuffer.TryRemove(Vehicle.TransferCommand.CommandId, out AgvcTransferCommand transferCommand);
-                agvcConnector.TransferComplete(transferCommand);
-                asePackage.SetTransferCommandInfoRequest(transferCommand, EnumCommandInfoStep.End);
+                abortTransferCommand.TransferStep = EnumTransferStep.Abort;
+                abortTransferCommand.CompleteStatus = GetCompleteStatusFromCancelRequest(receive.CancelAction);
+
+                agvcConnector.TransferComplete(abortTransferCommand);
+                asePackage.SetTransferCommandInfoRequest(abortTransferCommand, EnumCommandInfoStep.End);
 
                 if (Vehicle.TransferCommandsBuffer.IsEmpty)
                 {
@@ -3487,8 +3500,7 @@ namespace Mirle.Agv.AseMiddler.Controller
         private void CheckCanAbortCommand()
         {
             switch (Vehicle.TransferCommand.TransferStep)
-            {
-                case EnumTransferStep.Idle:
+            {               
                 case EnumTransferStep.MoveToAddress:
                 case EnumTransferStep.MoveToLoad:
                 case EnumTransferStep.MoveToUnload:
@@ -3501,7 +3513,8 @@ namespace Mirle.Agv.AseMiddler.Controller
                 case EnumTransferStep.MoveFail:
                 case EnumTransferStep.WaitOverrideToContinue:
                 case EnumTransferStep.GetNext:
-                    throw new Exception($"[Vehicle.TransferCommand.TransferStep ={Vehicle.TransferCommand.TransferStep}]");
+                    break;
+                case EnumTransferStep.Idle:
                 case EnumTransferStep.LoadArrival:
                 case EnumTransferStep.WaitLoadArrivalReply:
                 case EnumTransferStep.Load:
@@ -3516,7 +3529,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 case EnumTransferStep.TransferComplete:
                 case EnumTransferStep.RobotFail:
                 case EnumTransferStep.Abort:
-                    break;
+                    throw new Exception($"[當前階段 = {Vehicle.TransferCommand.TransferStep}]");
                 default:
                     break;
             }

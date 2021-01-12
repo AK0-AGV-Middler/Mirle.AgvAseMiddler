@@ -2026,7 +2026,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
             catch (Exception ex)
             {
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[收到.命令.取消.失敗] {ex.Message}");
+                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[無法.取消.命令] {ex.Message}");
 
                 Send_Cmd137_TransferCancelResponse(e.iSeqNum, (int)EnumAgvcReplyCode.Reject, receive);
             }
