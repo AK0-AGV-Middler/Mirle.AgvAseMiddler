@@ -1121,9 +1121,15 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 if (SlotIsFull()) return false;
 
+                foreach (var transferCommand in Vehicle.TransferCommandsBuffer.Values.ToList())
+                {
+                    if (transferCommand.IsE84ContinueLoadAndUnlaod)
+                        return false;
+                }
+
                 var loadTransferCommand = Vehicle.TransferCommandsBuffer.Values.First(loadCommand => loadCommand.EnrouteState == CommandState.LoadEnroute && InTheSameAgvStation(loadCommand.LoadPortId, Vehicle.AseMoveStatus.LastAddress.Id));
 
-                if (loadTransferCommand.IsE84ContinueLoadAndUnlaod) return false;
+                //if (loadTransferCommand.IsE84ContinueLoadAndUnlaod) return false;
 
                 var unloadTransferCommand = Vehicle.TransferCommandsBuffer.Values.First(unloadCommand => unloadCommand.EnrouteState == CommandState.UnloadEnroute && InTheSameAgvStation(unloadCommand.UnloadPortId, Vehicle.AseMoveStatus.LastAddress.Id));
 
@@ -1755,6 +1761,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 if (Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod)
                 {
+                    Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod = false;
                     var bindCommandId = Vehicle.TransferCommand.E84ContinueCommandId.Trim();
                     if (!string.IsNullOrEmpty(bindCommandId))
                     {
