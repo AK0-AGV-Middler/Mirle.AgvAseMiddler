@@ -370,7 +370,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             if (Vehicle.TransferCommand.IsCanceled)
                             {
                                 Vehicle.TransferCommand.IsStopAndClear = true;
-                                return;
+                                break;
                             }
                             if (Vehicle.AseMoveStatus.IsMoveEnd)
                             {
@@ -391,7 +391,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             if (Vehicle.TransferCommand.IsCanceled)
                             {
                                 Vehicle.TransferCommand.IsStopAndClear = true;
-                                return;
+                                break;
                             }
                             if (Vehicle.TransferCommand.SendWaitTimeout)
                             {
@@ -410,7 +410,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                             if (Vehicle.TransferCommand.IsCanceled)
                             {
                                 Vehicle.TransferCommand.IsStopAndClear = true;
-                                return;
+                                break;
                             }
                             if (Vehicle.TransferCommand.SendWaitTimeout)
                             {
@@ -1349,7 +1349,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     Task.Run(() =>
                     {
-                        SpinWait.SpinUntil(() => false, 1000);
                         AsePositionArgs positionArgs = new AsePositionArgs()
                         {
                             Arrival = EnumAseArrival.Arrival,
@@ -3457,6 +3456,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
             string abortCmdId = receive.CmdID.Trim();
             bool IsAbortCurCommand = Vehicle.TransferCommand.CommandId == abortCmdId;
+            if (abortCmdId == "SimulationCancel") IsAbortCurCommand = true;
 
             if (IsAbortCurCommand)
             {

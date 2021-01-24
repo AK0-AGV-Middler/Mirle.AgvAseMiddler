@@ -2005,7 +2005,7 @@ namespace Mirle.Agv.AseMiddler.Controller
 
                 var cmdId = receive.CmdID.Trim();
 
-                if (!Vehicle.TransferCommandsBuffer.ContainsKey(cmdId))
+                if (!Vehicle.TransferCommandsBuffer.ContainsKey(cmdId) && cmdId != "SimulationCancel")
                 {
                     throw new Exception($"No [{cmdId}] to cancel, reject [{receive.CancelAction}].");
                 }
@@ -2875,7 +2875,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             if (!Vehicle.IsIgnoreAppendDebug)
             {
                 try
-                {                 
+                {
                     int th = Vehicle.MainFlowConfig.StringBuilderMax;
                     int thHalf = th / 2;
 
@@ -2892,7 +2892,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 {
                     LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
                 }
-            }            
+            }
         }
 
         private void LogException(string classMethodName, string exMsg)
