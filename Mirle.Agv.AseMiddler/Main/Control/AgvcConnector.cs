@@ -2081,16 +2081,30 @@ namespace Mirle.Agv.AseMiddler.Controller
         private void ReceiveSent_Cmd36_TransferEventResponse(ID_36_TRANS_EVENT_RESPONSE response, ID_136_TRANS_EVENT_REP report)
         {
             try
-            {
+            {             
                 switch (response.EventType)
                 {
                     case EventType.LoadArrivals:
-                        Vehicle.TransferCommand.IsLoadArrivalReply = true;
+                        if (response.ReplyAction== ReplyActionType.Wait)
+                        {
+                            SpinWait.SpinUntil(() => false, Vehicle.AgvcConnectorConfig.LulWaitIntervalMs);
+                            Vehicle.TransferCommand.TransferStep = EnumTransferStep.LoadArrival;
+                        }
+                        else
+                        {
+                            Vehicle.TransferCommand.IsLoadArrivalReply = true;
+                        }
                         break;
                     case EventType.LoadComplete:
                         Vehicle.TransferCommand.IsLoadCompleteReply = true;
                         break;
                     case EventType.UnloadArrivals:
+                        if (response.ReplyAction == ReplyActionType.Wait)
+                        {
+                            SpinWait.SpinUntil(() => false, Vehicle.AgvcConnectorConfig.LulWaitIntervalMs);
+                            Vehicle.TransferCommand.TransferStep = EnumTransferStep.UnloadArrival;
+                            break;
+                        }
                         if (Vehicle.TransferCommand.TransferStep == EnumTransferStep.WaitMoveArrivalVitualPortReply)
                         {
                             if (response.PortInfos.Count == 0)

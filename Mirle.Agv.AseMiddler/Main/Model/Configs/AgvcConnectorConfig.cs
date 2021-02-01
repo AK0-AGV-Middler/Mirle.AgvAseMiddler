@@ -26,5 +26,6 @@ namespace Mirle.Agv.AseMiddler.Model.Configs
         public int NeerlyNoMoveRangeMm { get; set; }
         public int ScheduleIntervalMs { get; set; } = 50;
         public int SendWaitRetryTimes { get; set; } = 3;
+        public int LulWaitIntervalMs { get; set; } = 1000;
     }
 }
