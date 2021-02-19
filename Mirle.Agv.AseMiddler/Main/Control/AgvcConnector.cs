@@ -490,6 +490,10 @@ namespace Mirle.Agv.AseMiddler.Controller
                     {
                         if (queNeedReserveSections.Any())
                         {
+                            //mainFlowHandler.IsMoveStep() = 是否再移動階段
+                            //mainFlowHandler.CanVehMove() = 車輛充電和手臂狀態是否符合車輛可移動，若充電中則呼叫斷充。                            
+                            //Vehicle.PchMoveStatus.IsMoveEnd = 是否移動終了
+                            //IsSleepByAskReserveFail = 若詢問通行權被否決，則此flah為true且開啟一Task在AgvcConnectorConfig.AskReserveIntervalMs後flag轉為false
                             if (!IsAskReservePause && mainFlowHandler.IsMoveStep() && mainFlowHandler.CanVehMove() && !Vehicle.AseMoveStatus.IsMoveEnd && !IsSleepByAskReserveFail)
                             {
                                 AskAllSectionsReserveInOnce();

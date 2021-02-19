@@ -9,10 +9,7 @@ namespace Mirle.Agv.AseMiddler.Model
 
     public class BatteryLog
     {
-        public long MoveDistanceTotalM { get; set; }
-        public int LoadUnloadCount { get; set; }
-        public int ChargeCount { get; set; }
-        public string ResetTime { get; set; }
+        //開機後讀取這個數值作為初始電量百分比，電量變動時後更改此數值
         public int InitialSoc { get; set; } = 70;
     }
 }

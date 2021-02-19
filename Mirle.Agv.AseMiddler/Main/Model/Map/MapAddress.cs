@@ -45,14 +45,7 @@ namespace Mirle.Agv.AseMiddler.Model
         public bool IsSegmentPoint()
         {
             return !IsTransferPort() && !IsCharger();
-        }
-
-        public bool InAddress(MapPosition targetPosition)
-        {
-            var posRange = Vehicle.Instance.MainFlowConfig.RealPositionRangeMm;
-
-            return MyDistance(targetPosition) <= posRange;
-        }
+        }        
 
         public int MyDistance(MapPosition targetPosition)
         {

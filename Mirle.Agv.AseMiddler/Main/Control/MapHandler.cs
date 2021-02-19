@@ -18,23 +18,17 @@ namespace Mirle.Agv.AseMiddler.Controller
         public string SectionPath { get; set; }
         public string AddressPath { get; set; }
         public string PortIdMapPath { get; set; }
-        public string AgvStationPath { get; set; }
-        public string SectionBeamDisablePath { get; set; }
 
         private string lastReadAdrId = "";
         private string lastReadSecId = "";
-        private string lastReadPortId = "";
-        private string failAgvStationId = "";
-        private string failAddressIdInReadAgvStationFile = "";
+        private string lastReadPortId = "";     
 
         public MapHandler()
         {
             //mirleLogger = MirleLogger.Instance;
             SectionPath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.SectionFileName);
             AddressPath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.AddressFileName);
-            PortIdMapPath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.PortIdMapFileName);
-            AgvStationPath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.AgvStationFileName);
-            SectionBeamDisablePath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.SectionBeamDisablePathFileName);
+            PortIdMapPath = Path.Combine(Environment.CurrentDirectory, Vehicle.MapConfig.PortIdMapFileName);           
 
             LoadMapInfo();
         }

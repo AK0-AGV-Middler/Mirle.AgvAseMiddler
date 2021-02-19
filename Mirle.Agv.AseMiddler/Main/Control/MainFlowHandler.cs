@@ -634,6 +634,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
+        //車輛到達Address尚未二次定位進站，並根據計算結果決定二次進站過程要開左蓋還是右蓋
         private void MoveToAddressArrival()
         {
             try
@@ -643,6 +644,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 agvcConnector.ClearAllReserve();
                 if (Vehicle.IsCharging) StopCharge();
 
+                //檢查是否為虛擬port ID，若是取貨則為實體port ID，若是問到設備可以放貨也會是實體portID
                 if (!IsFirstOrderDealVitualPort())
                 {
                     LastIdlePosition.TimeStamp = DateTime.Now;
@@ -716,12 +718,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                                 break;
                             case CommandState.LoadEnroute:
                                 {
+                                    //先考慮有沒有要做E84連續取放榜定
                                     if (CheckE84Continue())
                                     {
                                         LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] CheckE84Continue success.[{Vehicle.TransferCommand.CommandId}][{Vehicle.TransferCommand.E84ContinueCommandId}]");
                                     }
                                     else
                                     {
+                                        //單獨取貨要確認車上是否有空儲位
                                         if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Left)
                                         {
                                             //CheckLoadEnrouteBindSamePortUnload();
@@ -738,12 +742,14 @@ namespace Mirle.Agv.AseMiddler.Controller
                                         }
                                         else
                                         {
+                                            //車上無空儲位則考慮有沒有放貨命令
                                             VehicleSlotFullFindFitUnloadCommand();
                                         }
                                     }
                                 }
                                 break;
                             case CommandState.UnloadEnroute:
+                                //已取得放貨儲位下考慮有沒有要做E84連續取放榜定
                                 if (CheckE84Continue())
                                 {
                                     LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] CheckE84Continue success.[{Vehicle.TransferCommand.CommandId}][{Vehicle.TransferCommand.E84ContinueCommandId}]");
@@ -784,82 +790,6 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
-        //private bool CheckUnloadEnrouteBindSamePortLoad()
-        //{
-        //    var unloadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.UnloadPortId];
-        //    var agvStation = Vehicle.Mapinfo.agvStationMap[unloadPort.AgvStationId];
-        //    foreach (var transferCommand in Vehicle.TransferCommandsBuffer.Values.ToArray())
-        //    {
-        //        if (transferCommand.EnrouteState == CommandState.LoadEnroute)
-        //        {
-        //            if (agvStation.IsInThisAgvStationForPortId(transferCommand.LoadPortId))
-        //            {
-        //                if (Vehicle.AseCarrierSlotL.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Left)
-        //                {
-        //                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-        //                    transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
-        //                    Vehicle.TransferCommand = transferCommand;
-
-        //                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定.左開蓋] Check unload enroute bind same port load. Open slot left.");
-        //                    return true;
-        //                }
-        //                else if (Vehicle.AseCarrierSlotR.CarrierSlotStatus == EnumAseCarrierSlotStatus.Empty && Vehicle.MainFlowConfig.SlotDisable != EnumSlotSelect.Right)
-        //                {
-        //                    Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToUnload;
-        //                    transferCommand.TransferStep = EnumTransferStep.MoveToLoad;
-        //                    Vehicle.TransferCommand = transferCommand;
-
-        //                    LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定.右開蓋] Check unload enroute bind same port load. Open slot right.");
-        //                    return true;
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    return false;
-        //}
-        //private void CheckLoadEnrouteBindSamePortUnload()
-        //{
-        //    try
-        //    {
-        //        if (Vehicle.MainFlowConfig.IsE84Continue)
-        //        {
-        //            if (string.IsNullOrEmpty(Vehicle.TransferCommand.LoadPortId))
-        //            {
-        //                throw new Exception("CheckLoadEnrouteBindSamePortUnload fail. Vehicle.TransferCommand.LoadPortId is empty");
-        //            }
-        //            if (!Vehicle.Mapinfo.portMap.ContainsKey(Vehicle.TransferCommand.LoadPortId.Trim()))
-        //            {
-        //                throw new Exception($"CheckLoadEnrouteBindSamePortUnload fail. !Vehicle.Mapinfo.portMap.ContainsKey {Vehicle.TransferCommand.LoadPortId}");
-        //            }
-        //            var loadPort = Vehicle.Mapinfo.portMap[Vehicle.TransferCommand.LoadPortId.Trim()];
-        //            if (loadPort.IsAgvStationPort())
-        //            {
-        //                var agvStation = Vehicle.Mapinfo.agvStationMap[loadPort.AgvStationId];
-        //                foreach (var transferCommand in Vehicle.TransferCommandsBuffer.Values.ToArray())
-        //                {
-        //                    if (transferCommand.EnrouteState == CommandState.UnloadEnroute)
-        //                    {
-        //                        var unloadPort = Vehicle.Mapinfo.portMap[transferCommand.UnloadPortId];
-        //                        if (unloadPort.IsVitualPort)
-        //                        {
-        //                            if (agvStation.IsInThisAgvStationForPortId(unloadPort.ID))
-        //                            {
-        //                                CombineE84ContinueTransferCommands(Vehicle.TransferCommand, transferCommand);
-        //                                LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] Load enroute bind same port unload.[{transferCommand.CommandId}]");
-        //                                break;
-        //                            }
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-        //    }
-        //}
         private void VehicleSlotFullFindFitUnloadCommand()
         {
             Vehicle.TransferCommand.TransferStep = EnumTransferStep.MoveToLoad;
@@ -917,6 +847,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 return false;
             }
         }
+        //詢問C層逾放貨的Station是否有準備好的實體port ID
         private void DealVitualPortUnloadArrivalReply()
         {
             try
@@ -1111,6 +1042,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                 LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
             }
         }
+        //檢查是否有符合E84連續取放的兩筆命令，若有則在取放命令內填入綁定資訊
         private bool CheckE84Continue()
         {
             if (!Vehicle.MainFlowConfig.IsE84Continue) return false;
@@ -1752,12 +1684,14 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
+        //取貨階段完成，選擇要繼續執行原命令剩下階段或是切換成其他命令執行
         public void LoadEndOptimize()
         {
             try
             {
                 LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取貨完成.命令選擇] Load End Optimize");
 
+                //若此筆完成的取貨有綁定E84連續，則將當前命令指向該筆綁定放貨命令並等待放貨完成。
                 if (Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod)
                 {
                     Vehicle.TransferCommand.IsE84ContinueLoadAndUnlaod = false;
@@ -1780,6 +1714,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     }
                 }
 
+                //若無綁定則檢查當下其他命令是否有符合E84連續取放的兩筆命令
                 if (CheckE84Continue())
                 {
                     LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[雙命令.綁定] CheckE84Continue success.[{Vehicle.TransferCommand.CommandId}][{Vehicle.TransferCommand.E84ContinueCommandId}]");
@@ -1801,6 +1736,7 @@ namespace Mirle.Agv.AseMiddler.Controller
                     }
                 }
 
+                //若存在多筆未完成命令則依據Port類型/距離決定是否繼續執行或是切換命令執行
                 if (Vehicle.TransferCommandsBuffer.Count > 1)
                 {
                     bool foundNextCommand = false;
@@ -2158,6 +2094,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
+        //做完unload complete通報後，優先執行transfer complete後才選取下一筆執行命令
         private void UnloadEnd()
         {
             try
@@ -2322,6 +2259,7 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
+        //當前命令完成後，若存在多筆未完成命令則依據Port類型/距離決定是否繼續執行或是切換命令執行，若無命令則建立並指向空白全新TransferCommand
         private void TransferCompleteOptimize()
         {
             try
