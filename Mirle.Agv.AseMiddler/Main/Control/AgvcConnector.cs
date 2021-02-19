@@ -2096,7 +2096,15 @@ namespace Mirle.Agv.AseMiddler.Controller
                         }
                         break;
                     case EventType.LoadComplete:
-                        Vehicle.TransferCommand.IsLoadCompleteReply = true;
+                        if (response.ReplyAction == ReplyActionType.Wait)
+                        {
+                            SpinWait.SpinUntil(() => false, Vehicle.AgvcConnectorConfig.LulWaitIntervalMs);
+                            LoadComplete();
+                        }
+                        else
+                        {
+                            Vehicle.TransferCommand.IsLoadCompleteReply = true;
+                        }
                         break;
                     case EventType.UnloadArrivals:
                         if (response.ReplyAction == ReplyActionType.Wait)
@@ -2123,7 +2131,15 @@ namespace Mirle.Agv.AseMiddler.Controller
                         }
                         break;
                     case EventType.UnloadComplete:
-                        Vehicle.TransferCommand.IsUnloadCompleteReply = true;
+                        if (response.ReplyAction == ReplyActionType.Wait)
+                        {
+                            SpinWait.SpinUntil(() => false, Vehicle.AgvcConnectorConfig.LulWaitIntervalMs);
+                            UnloadComplete();
+                        }
+                        else
+                        {
+                            Vehicle.TransferCommand.IsUnloadCompleteReply = true;
+                        }
                         break;
                     case EventType.ReserveReq:
                         break;
