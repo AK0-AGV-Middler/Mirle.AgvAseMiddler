@@ -1898,30 +1898,6 @@ namespace Mirle.Agv.AseMiddler.Controller
             }
         }
 
-        public void Receive_Cmd38_GuideInfoResponse(object sender, TcpIpEventArgs e)
-        {
-            try
-            {
-                ID_38_GUIDE_INFO_RESPONSE response = (ID_38_GUIDE_INFO_RESPONSE)e.objPacket;
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"[取得.路線] ID_38_GUIDE_INFO_RESPONSE.");
-
-                ShowGuideInfoResponse(response);
-
-                Vehicle.AseMovingGuide = new AseMovingGuide(response);
-                //ClearAllReserve();
-                Vehicle.AseMoveStatus.IsMoveEnd = false;
-                mainFlowHandler.SetupAseMovingGuideMovingSections();
-                SetupNeedReserveSections();
-                StatusChangeReport();
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, $"IsMoveEnd Need False And Cur IsMoveEnd = {Vehicle.AseMoveStatus.IsMoveEnd.ToString()}");
-
-                mainFlowHandler.LogDebug(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, Vehicle.AseMovingGuide.GetInfo());
-            }
-            catch (Exception ex)
-            {
-                LogException(GetType().Name + ":" + MethodBase.GetCurrentMethod().Name, ex.Message);
-            }
-        }
         public void Receive_Cmd38_GuideInfoResponse(ID_38_GUIDE_INFO_RESPONSE response)
         {
             try
